@@ -1,0 +1,15 @@
+/target/
+**/*.rs.bk
+# Local env files
+.env
+.env.*
+# IDE/editor
+.idea/
+.vscode/
+# OS files
+.DS_Store
+Thumbs.db
+# Local databases
+*.db
+*.db-shm
+*.db-wal
