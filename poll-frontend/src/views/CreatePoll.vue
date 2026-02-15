@@ -8,6 +8,55 @@
       </p>
     </header>
 
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+        <div>
+          <h2 style="margin: 0;">All polls</h2>
+          <p class="text-muted text-sm" style="margin: 0.4rem 0 0;">
+            Admin view of every event in the system.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="btn btn-ghost"
+          style="white-space: nowrap;"
+          :disabled="eventsLoading"
+          @click="loadEvents"
+        >
+          {{ eventsLoading ? 'Refreshing…' : 'Refresh' }}
+        </button>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <p v-if="eventsLoading && !events.length" class="text-muted text-sm">
+          Loading events…
+        </p>
+        <p v-else-if="eventsError" class="text-sm" style="color: var(--no);">
+          {{ eventsError }}
+        </p>
+        <p v-else-if="!events.length" class="text-muted text-sm">
+          No polls yet.
+        </p>
+        <ul v-else class="text-sm" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem;">
+          <li
+            v-for="event in events"
+            :key="event.id"
+            style="display: flex; flex-direction: column; gap: 0.25rem;"
+          >
+            <a :href="`/poll/${event.id}`" style="font-weight: 600;">
+              {{ event.title || 'Untitled poll' }}
+            </a>
+            <span class="text-muted" style="font-size: 0.8rem;">
+              Created {{ formatDate(event.created_at) }}
+            </span>
+            <span v-if="event.description" class="text-muted">
+              {{ event.description }}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
     <form @submit.prevent="submit" novalidate>
       <div class="card" style="display: flex; flex-direction: column; gap: 1.25rem;">
 
@@ -117,7 +166,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { api } from '../api'
 
 const form = reactive({
@@ -131,6 +180,9 @@ const error      = ref(null)
 const slotError  = ref(null)
 const createdId  = ref(null)
 const copied     = ref(false)
+const events     = ref([])
+const eventsLoading = ref(false)
+const eventsError   = ref(null)
 
 const shareUrl = computed(() =>
   createdId.value ? `${window.location.origin}/poll/${createdId.value}` : ''
@@ -180,6 +232,7 @@ async function submit() {
 
     const { id } = await api.createPoll(payload)
     createdId.value = id
+    await loadEvents()
   } catch (e) {
     error.value = e.message
   } finally {
@@ -192,6 +245,32 @@ async function copyLink() {
   copied.value = true
   setTimeout(() => { copied.value = false }, 2000)
 }
+
+function formatDate(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date)
+}
+
+async function loadEvents() {
+  eventsLoading.value = true
+  eventsError.value = null
+  try {
+    events.value = await api.listEvents()
+  } catch (e) {
+    eventsError.value = e.message
+  } finally {
+    eventsLoading.value = false
+  }
+}
+
+onMounted(loadEvents)
 </script>
 
 <style scoped>

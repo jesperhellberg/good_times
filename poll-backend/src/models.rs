@@ -84,6 +84,14 @@ pub struct PollResponse {
     pub participants: Vec<ParticipantResponse>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct EventSummaryResponse {
+    pub id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub created_at: String,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct SubmitVoteRequest {
     pub participant_name: String,

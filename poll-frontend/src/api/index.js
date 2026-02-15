@@ -26,6 +26,11 @@ export const api = {
     return request('POST', '/poll', payload)
   },
 
+  /** List all events (admin) */
+  listEvents() {
+    return request('GET', '/events')
+  },
+
   /** Submit votes for a participant. Returns { participant_id } */
   submitVote(pollId, payload) {
     return request('POST', `/poll/${pollId}/vote`, payload)

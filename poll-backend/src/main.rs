@@ -13,6 +13,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use routes::{
     create_poll::create_poll,
     get_poll::get_poll,
+    list_events::list_events,
     submit_vote::submit_vote,
 };
 
@@ -56,6 +57,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/poll", post(create_poll))
         .route("/api/poll/:id", get(get_poll))
         .route("/api/poll/:id/vote", post(submit_vote))
+        .route("/api/events", get(list_events))
         .layer(cors)
         .with_state(pool);
 
