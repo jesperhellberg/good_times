@@ -43,9 +43,22 @@
             :key="event.id"
             style="display: flex; flex-direction: column; gap: 0.25rem;"
           >
-            <a :href="`/poll/${event.id}`" style="font-weight: 600;">
-              {{ event.title || 'Untitled poll' }}
-            </a>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+              <a :href="`/poll/${event.id}`" style="font-weight: 600;">
+                {{ event.title || 'Untitled poll' }}
+              </a>
+              <button
+                type="button"
+                class="btn btn-danger"
+                style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                :disabled="deletingId"
+                @click="deleteEvent(event)"
+                :aria-label="deletingId === event.id ? 'Deleting poll' : 'Delete poll'"
+                :title="deletingId === event.id ? 'Deleting…' : 'Delete poll'"
+              >
+                {{ deletingId === event.id ? 'Deleting…' : '🗑' }}
+              </button>
+            </div>
             <span class="text-muted" style="font-size: 0.8rem;">
               Created {{ formatDate(event.created_at) }}
             </span>
@@ -185,6 +198,7 @@ const copied     = ref(false)
 const events     = ref([])
 const eventsLoading = ref(false)
 const eventsError   = ref(null)
+const deletingId    = ref(null)
 
 const shareUrl = computed(() =>
   createdId.value ? `${window.location.origin}/poll/${createdId.value}` : ''
@@ -256,6 +270,25 @@ async function copyLink() {
   await navigator.clipboard.writeText(shareUrl.value)
   copied.value = true
   setTimeout(() => { copied.value = false }, 2000)
+}
+
+async function deleteEvent(event) {
+  if (deletingId.value) return
+  if (!confirm(`Delete "${event.title || 'Untitled poll'}"? This cannot be undone.`)) {
+    return
+  }
+
+  deletingId.value = event.id
+  eventsError.value = null
+
+  try {
+    await api.deletePoll(event.id)
+    events.value = events.value.filter(item => item.id !== event.id)
+  } catch (e) {
+    eventsError.value = e.message
+  } finally {
+    deletingId.value = null
+  }
 }
 
 function formatDate(value) {

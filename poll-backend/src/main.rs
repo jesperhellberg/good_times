@@ -2,7 +2,7 @@ mod models;
 mod routes;
 
 use axum::{
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -12,6 +12,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use routes::{
     create_poll::create_poll,
+    delete_poll::delete_poll,
     get_poll::get_poll,
     list_events::list_events,
     submit_vote::submit_vote,
@@ -55,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/api/poll", post(create_poll))
-        .route("/api/poll/:id", get(get_poll))
+        .route("/api/poll/:id", get(get_poll).delete(delete_poll))
         .route("/api/poll/:id/vote", post(submit_vote))
         .route("/api/events", get(list_events))
         .layer(cors)

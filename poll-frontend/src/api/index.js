@@ -31,6 +31,11 @@ export const api = {
     return request('GET', '/events')
   },
 
+  /** Delete a poll (admin). Returns { id } */
+  deletePoll(id) {
+    return request('DELETE', `/poll/${id}`)
+  },
+
   /** Submit votes for a participant. Returns { participant_id } */
   submitVote(pollId, payload) {
     return request('POST', `/poll/${pollId}/vote`, payload)
