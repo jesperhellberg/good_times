@@ -8,7 +8,7 @@ use axum::{
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::{net::SocketAddr, str::FromStr};
 use tower_http::cors::{Any, CorsLayer};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use routes::{
     create_poll::create_poll, delete_poll::delete_poll, get_poll::get_poll,
@@ -22,6 +22,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Set up tracing
     tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
         .with(tracing_subscriber::fmt::layer())
         .init();
 
