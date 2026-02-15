@@ -24,15 +24,17 @@
       <!-- Results table -->
       <section style="margin-bottom: 2.5rem;">
         <h2 style="margin-bottom: 1.25rem;">Availability</h2>
-        <ResultsTable :poll="poll" />
+        <ResultsTable :poll="poll" @edit-participant="startEdit" />
       </section>
 
       <!-- Vote form -->
       <section class="card">
         <template v-if="!submitted">
-          <h2 style="margin-bottom: 0.25rem;">Add your availability</h2>
+          <h2 style="margin-bottom: 0.25rem;">
+            {{ editingParticipantId ? 'Update your availability' : 'Add your availability' }}
+          </h2>
           <p class="text-muted text-sm" style="margin-bottom: 1.5rem;">
-            Mark each slot as available or not, then submit.
+            {{ editingParticipantId ? 'Adjust your selections, then save your changes.' : 'Mark each slot as available or not, then submit.' }}
           </p>
 
           <div class="field" style="margin-bottom: 1.5rem; max-width: 280px;">
@@ -43,6 +45,7 @@
               type="text"
               placeholder="e.g. Alice"
               autofocus
+              :disabled="!!editingParticipantId"
             />
           </div>
 
@@ -71,7 +74,7 @@
           <div style="display: flex; align-items: center; justify-content: flex-end; gap: 1rem;">
             <p v-if="voteError" class="text-sm" style="color: var(--no);">{{ voteError }}</p>
             <button class="btn btn-primary" :disabled="submitting" @click="submitVotes">
-              {{ submitting ? 'Submitting…' : 'Submit' }}
+              {{ submitting ? (editingParticipantId ? 'Saving…' : 'Submitting…') : (editingParticipantId ? 'Save changes' : 'Submit') }}
             </button>
           </div>
         </template>
@@ -110,6 +113,7 @@ const submitting  = ref(false)
 const voteError   = ref(null)
 const submitted   = ref(false)
 const submittedName = ref('')
+const editingParticipantId = ref(null)
 
 async function loadPoll() {
   loading.value    = true
@@ -144,7 +148,7 @@ function formatSlot(slot) {
 async function submitVotes() {
   voteError.value = null
 
-  if (!name.value.trim()) {
+  if (!editingParticipantId.value && !name.value.trim()) {
     voteError.value = 'Please enter your name.'
     return
   }
@@ -157,13 +161,23 @@ async function submitVotes() {
 
   submitting.value = true
   try {
-    await api.submitVote(pollId, {
-      participant_name: name.value.trim(),
-      votes: poll.value.time_slots.map(s => ({
-        time_slot_id: s.id,
-        available:    votes[s.id],
-      })),
-    })
+    if (editingParticipantId.value) {
+      await api.updateVotes(pollId, editingParticipantId.value, {
+        votes: poll.value.time_slots.map(s => ({
+          time_slot_id: s.id,
+          available:    votes[s.id],
+        })),
+      })
+      editingParticipantId.value = null
+    } else {
+      await api.submitVote(pollId, {
+        participant_name: name.value.trim(),
+        votes: poll.value.time_slots.map(s => ({
+          time_slot_id: s.id,
+          available:    votes[s.id],
+        })),
+      })
+    }
 
     submittedName.value = name.value.trim()
     submitted.value = true
@@ -174,6 +188,19 @@ async function submitVotes() {
     voteError.value = e.message
   } finally {
     submitting.value = false
+  }
+}
+
+function startEdit(participant) {
+  if (!poll.value) return
+  submitted.value = false
+  voteError.value = null
+  editingParticipantId.value = participant.id
+  name.value = participant.name
+
+  for (const slot of poll.value.time_slots) {
+    const vote = participant.votes.find(v => v.time_slot_id === slot.id)
+    votes[slot.id] = vote ? vote.available : undefined
   }
 }
 

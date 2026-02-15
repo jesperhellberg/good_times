@@ -40,4 +40,9 @@ export const api = {
   submitVote(pollId, payload) {
     return request('POST', `/poll/${pollId}/vote`, payload)
   },
+
+  /** Update votes for a participant. Returns { participant_id } */
+  updateVotes(pollId, participantId, payload) {
+    return request('PUT', `/poll/${pollId}/participant/${participantId}`, payload)
+  },
 }

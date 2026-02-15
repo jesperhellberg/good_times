@@ -5,9 +5,7 @@ use axum::{
 };
 use sqlx::SqlitePool;
 
-use crate::models::{
-    ParticipantResponse, PollResponse, TimeSlotResponse, VoteResponse,
-};
+use crate::models::{ParticipantResponse, PollResponse, TimeSlotResponse, VoteResponse};
 
 pub async fn get_poll(
     State(pool): State<SqlitePool>,

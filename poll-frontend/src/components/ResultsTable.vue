@@ -22,7 +22,18 @@
       </thead>
       <tbody>
         <tr v-for="participant in poll.participants" :key="participant.id">
-          <td class="name-col">{{ participant.name }}</td>
+          <td class="name-col">
+            <div class="name-cell">
+              <span>{{ participant.name }}</span>
+              <button
+                type="button"
+                class="edit-btn"
+                aria-label="Edit availability"
+                title="Edit availability"
+                @click="$emit('edit-participant', participant)"
+              >✎</button>
+            </div>
+          </td>
           <td
             v-for="slot in poll.time_slots"
             :key="slot.id"
@@ -50,6 +61,8 @@ import { computed } from 'vue'
 const props = defineProps({
   poll: { type: Object, required: true },
 })
+
+defineEmits(['edit-participant'])
 
 const bestSlotId = computed(() => {
   if (!props.poll.time_slots.length) return null
@@ -124,6 +137,26 @@ function slotTime(slot) {
   background: #fff;
   z-index: 1;
   min-width: 100px;
+}
+
+.name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-btn {
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.1rem 0.2rem;
+  line-height: 1;
+}
+
+.edit-btn:hover {
+  color: var(--ink);
 }
 
 thead .name-col {

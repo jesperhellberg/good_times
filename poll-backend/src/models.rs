@@ -28,13 +28,6 @@ pub struct ParticipantRow {
     pub created_at: String,
 }
 
-#[derive(Debug, sqlx::FromRow)]
-pub struct VoteRow {
-    pub participant_id: String,
-    pub time_slot_id: String,
-    pub available: bool,
-}
-
 // ── API request / response types ──────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
@@ -57,7 +50,7 @@ pub struct TimeSlotResponse {
     pub starts_at: String,
     pub ends_at: String,
     /// Number of participants who marked this slot as available
-    pub available_count: i64,  // COUNT() always returns i64 in SQLx
+    pub available_count: i64, // COUNT() always returns i64 in SQLx
 }
 
 #[derive(Debug, Serialize)]
@@ -103,6 +96,12 @@ pub struct SubmitVoteRequest {
 pub struct VoteInput {
     pub time_slot_id: String,
     pub available: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateVotesRequest {
+    /// One entry per time slot
+    pub votes: Vec<VoteInput>,
 }
 
 #[derive(Debug, Serialize)]
