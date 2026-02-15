@@ -103,19 +103,19 @@
               <span class="slot-index text-muted text-sm">{{ i + 1 }}</span>
               <div class="field" style="flex: 1; gap: 0.25rem;">
                 <label :for="`slot-start-${i}`" class="sr-only">Start</label>
-                <input
+                <FlatPickr
                   :id="`slot-start-${i}`"
                   v-model="slot.starts_at"
-                  type="datetime-local"
+                  :config="pickerConfig"
                 />
               </div>
               <span class="text-muted text-sm" style="padding: 0 0.25rem;">→</span>
               <div class="field" style="flex: 1; gap: 0.25rem;">
                 <label :for="`slot-end-${i}`" class="sr-only">End</label>
-                <input
+                <FlatPickr
                   :id="`slot-end-${i}`"
                   v-model="slot.ends_at"
-                  type="datetime-local"
+                  :config="pickerConfig"
                 />
               </div>
               <button
@@ -167,6 +167,8 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
+import FlatPickr from 'vue-flatpickr-component'
+import 'flatpickr/dist/flatpickr.css'
 import { api } from '../api'
 
 const form = reactive({
@@ -187,6 +189,16 @@ const eventsError   = ref(null)
 const shareUrl = computed(() =>
   createdId.value ? `${window.location.origin}/poll/${createdId.value}` : ''
 )
+
+const pickerConfig = {
+  enableTime: true,
+  time_24hr: true,
+  minuteIncrement: 30,
+  dateFormat: "Y-m-d\\TH:i",
+  altInput: true,
+  altFormat: "Y-m-d H:i",
+  altInputClass: "alt-datetime-input",
+}
 
 function addSlot() {
   form.slots.push({ starts_at: '', ends_at: '' })
@@ -284,5 +296,13 @@ onMounted(loadEvents)
   width: 1.25rem;
   text-align: center;
   flex-shrink: 0;
+}
+
+:deep(.alt-datetime-input) {
+  padding-right: 2.2rem;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='18' height='18' rx='2' ry='2'/><line x1='16' y1='2.5' x2='16' y2='6.5'/><line x1='8' y1='2.5' x2='8' y2='6.5'/><line x1='3' y1='10' x2='21' y2='10'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 16px 16px;
 }
 </style>
