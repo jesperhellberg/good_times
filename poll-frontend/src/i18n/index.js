@@ -1,0 +1,153 @@
+const messages = {
+  en: {
+    common: {
+      optional: 'optional',
+      untitled: 'Untitled poll',
+    },
+    landing: {
+      eyebrow: 'Good Times',
+      title: 'Good Times',
+      blurb1:
+        'Find a time that works for everyone in minutes, not days. Create a poll, share one link, and let your group pick the best slot. No logins, no spreadsheets, no chaos — just a fast, friendly way to get together.',
+      blurb2:
+        'Good Times keeps planning simple with clear time slots and a clean overview of who can make it. Perfect for teams, friends, and families.',
+    },
+    admin: {
+      title: 'New poll',
+      subtitle: 'Set up a time slot poll and share the link with your group.',
+      allPolls: 'All polls',
+      allPollsSubtitle: 'Admin view of every event in the system.',
+      refresh: 'Refresh',
+      refreshing: 'Refreshing…',
+      loadingEvents: 'Loading events…',
+      noPolls: 'No polls yet.',
+      createdAt: 'Created {date}',
+      shareTitle: 'Poll created — share this link:',
+      copyLink: 'Copy link',
+      copied: 'Copied!',
+      createPoll: 'Create poll',
+      creating: 'Creating…',
+      timeSlots: 'Time slots',
+      addSlot: '+ Add slot',
+      delete: 'Delete poll',
+      deleting: 'Deleting…',
+      deleteConfirm: 'Delete "{title}"? This cannot be undone.',
+      form: {
+        titleLabel: 'Poll title',
+        titlePlaceholder: 'e.g. Summer dinner',
+        descriptionLabel: 'Description',
+        descriptionPlaceholder: 'Any details the group should know…',
+        startLabel: 'Start',
+        endLabel: 'End',
+      },
+      errors: {
+        slotMissing: 'Please fill in all time slots.',
+        slotOrder: "Each slot's end time must be after its start time.",
+      },
+    },
+    poll: {
+      loading: 'Loading poll…',
+      tryAgain: 'Try again',
+      availability: 'Availability',
+      addAvailability: 'Add your availability',
+      updateAvailability: 'Update your availability',
+      addInstruction: 'Mark each slot as available or not, then submit.',
+      updateInstruction: 'Adjust your selections, then save your changes.',
+      yourName: 'Your name',
+      yourNamePlaceholder: 'e.g. Alice',
+      submit: 'Submit',
+      submitting: 'Submitting…',
+      saveChanges: 'Save changes',
+      saving: 'Saving…',
+      thanks: 'Thanks, {name}!',
+      recorded: 'Your availability has been recorded.',
+      editAvailability: 'Edit availability',
+      errors: {
+        nameRequired: 'Please enter your name.',
+        allSlots: 'Please mark every slot before submitting.',
+      },
+      emptyResponses: 'No responses yet — be the first!',
+    },
+  },
+  sv: {
+    common: {
+      optional: 'valfritt',
+      untitled: 'Namnlös omröstning',
+    },
+    landing: {
+      eyebrow: 'Good Times',
+      title: 'Good Times',
+      blurb1:
+        'Hitta en tid som passar alla på några minuter, inte dagar. Skapa en omröstning, dela en länk och låt gruppen välja bästa tiden. Inga inloggningar, inga kalkylblad, inget kaos — bara ett snabbt och trevligt sätt att ses.',
+      blurb2:
+        'Good Times gör planeringen enkel med tydliga tidsförslag och en ren överblick över vem som kan. Perfekt för team, vänner och familj.',
+    },
+    admin: {
+      title: 'Ny omröstning',
+      subtitle: 'Skapa en tidsomröstning och dela länken med din grupp.',
+      allPolls: 'Alla omröstningar',
+      allPollsSubtitle: 'Adminvy över alla event i systemet.',
+      refresh: 'Uppdatera',
+      refreshing: 'Uppdaterar…',
+      loadingEvents: 'Laddar omröstningar…',
+      noPolls: 'Inga omröstningar än.',
+      createdAt: 'Skapad {date}',
+      shareTitle: 'Omröstning skapad — dela länken:',
+      copyLink: 'Kopiera länk',
+      copied: 'Kopierad!',
+      createPoll: 'Skapa omröstning',
+      creating: 'Skapar…',
+      timeSlots: 'Tidsförslag',
+      addSlot: '+ Lägg till tid',
+      delete: 'Ta bort omröstning',
+      deleting: 'Tar bort…',
+      deleteConfirm: 'Ta bort "{title}"? Det går inte att ångra.',
+      form: {
+        titleLabel: 'Titel',
+        titlePlaceholder: 't.ex. Sommarmiddag',
+        descriptionLabel: 'Beskrivning',
+        descriptionPlaceholder: 'Detaljer som gruppen bör känna till…',
+        startLabel: 'Start',
+        endLabel: 'Slut',
+      },
+      errors: {
+        slotMissing: 'Fyll i alla tidsförslag.',
+        slotOrder: 'Varje sluttid måste vara efter starttiden.',
+      },
+    },
+    poll: {
+      loading: 'Laddar omröstning…',
+      tryAgain: 'Försök igen',
+      availability: 'Tillgänglighet',
+      addAvailability: 'Lägg till din tillgänglighet',
+      updateAvailability: 'Uppdatera din tillgänglighet',
+      addInstruction: 'Markera varje tid som tillgänglig eller inte och skicka in.',
+      updateInstruction: 'Justera dina val och spara ändringarna.',
+      yourName: 'Ditt namn',
+      yourNamePlaceholder: 't.ex. Alice',
+      submit: 'Skicka',
+      submitting: 'Skickar…',
+      saveChanges: 'Spara ändringar',
+      saving: 'Sparar…',
+      thanks: 'Tack, {name}!',
+      recorded: 'Din tillgänglighet har sparats.',
+      editAvailability: 'Redigera tillgänglighet',
+      errors: {
+        nameRequired: 'Skriv in ditt namn.',
+        allSlots: 'Markera alla tider innan du skickar in.',
+      },
+      emptyResponses: 'Inga svar ännu — bli först!',
+    },
+  },
+}
+
+function resolveLocale() {
+  const saved = localStorage.getItem('locale')
+  if (saved === 'en' || saved === 'sv') return saved
+
+  const browser = (navigator.language || 'en').toLowerCase()
+  if (browser.startsWith('sv')) return 'sv'
+  return 'en'
+}
+
+export { messages, resolveLocale }

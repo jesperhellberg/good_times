@@ -3,13 +3,13 @@
 
     <!-- Loading -->
     <div v-if="loading" style="padding: 5rem 0; text-align: center; color: var(--ink-muted);">
-      Loading poll…
+      {{ t('poll.loading') }}
     </div>
 
     <!-- Error -->
     <div v-else-if="fetchError" style="padding: 5rem 0; text-align: center;">
       <p style="color: var(--no); margin-bottom: 1rem;">{{ fetchError }}</p>
-      <button class="btn btn-ghost" @click="loadPoll">Try again</button>
+      <button class="btn btn-ghost" @click="loadPoll">{{ t('poll.tryAgain') }}</button>
     </div>
 
     <template v-else-if="poll">
@@ -23,7 +23,7 @@
 
       <!-- Results table -->
       <section style="margin-bottom: 2.5rem;">
-        <h2 style="margin-bottom: 1.25rem;">Availability</h2>
+        <h2 style="margin-bottom: 1.25rem;">{{ t('poll.availability') }}</h2>
         <ResultsTable :poll="poll" @edit-participant="startEdit" />
       </section>
 
@@ -31,19 +31,19 @@
       <section class="card">
         <template v-if="!submitted">
           <h2 style="margin-bottom: 0.25rem;">
-            {{ editingParticipantId ? 'Update your availability' : 'Add your availability' }}
+            {{ editingParticipantId ? t('poll.updateAvailability') : t('poll.addAvailability') }}
           </h2>
           <p class="text-muted text-sm" style="margin-bottom: 1.5rem;">
-            {{ editingParticipantId ? 'Adjust your selections, then save your changes.' : 'Mark each slot as available or not, then submit.' }}
+            {{ editingParticipantId ? t('poll.updateInstruction') : t('poll.addInstruction') }}
           </p>
 
           <div class="field" style="margin-bottom: 1.5rem; max-width: 280px;">
-            <label for="participant-name">Your name</label>
+            <label for="participant-name">{{ t('poll.yourName') }}</label>
             <input
               id="participant-name"
               v-model="name"
               type="text"
-              placeholder="e.g. Alice"
+              :placeholder="t('poll.yourNamePlaceholder')"
               autofocus
               :disabled="!!editingParticipantId"
             />
@@ -74,7 +74,7 @@
           <div style="display: flex; align-items: center; justify-content: flex-end; gap: 1rem;">
             <p v-if="voteError" class="text-sm" style="color: var(--no);">{{ voteError }}</p>
             <button class="btn btn-primary" :disabled="submitting" @click="submitVotes">
-              {{ submitting ? (editingParticipantId ? 'Saving…' : 'Submitting…') : (editingParticipantId ? 'Save changes' : 'Submit') }}
+              {{ submitting ? (editingParticipantId ? t('poll.saving') : t('poll.submitting')) : (editingParticipantId ? t('poll.saveChanges') : t('poll.submit')) }}
             </button>
           </div>
         </template>
@@ -82,8 +82,8 @@
         <template v-else>
           <div style="text-align: center; padding: 1rem 0;">
             <div style="font-size: 2rem; margin-bottom: 0.75rem;">🎉</div>
-            <h3 style="margin-bottom: 0.4rem;">Thanks, {{ submittedName }}!</h3>
-            <p class="text-muted text-sm">Your availability has been recorded.</p>
+            <h3 style="margin-bottom: 0.4rem;">{{ t('poll.thanks', { name: submittedName }) }}</h3>
+            <p class="text-muted text-sm">{{ t('poll.recorded') }}</p>
           </div>
         </template>
       </section>
@@ -95,10 +95,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 import ResultsTable from '../components/ResultsTable.vue'
+
+const { t, locale } = useI18n()
 
 const route = useRoute()
 const pollId = route.params.id
@@ -114,6 +117,7 @@ const voteError   = ref(null)
 const submitted   = ref(false)
 const submittedName = ref('')
 const editingParticipantId = ref(null)
+const dateLocale = computed(() => (locale.value === 'sv' ? 'sv-SE' : 'en-GB'))
 
 async function loadPoll() {
   loading.value    = true
@@ -139,9 +143,9 @@ function toggleVote(slotId) {
 function formatSlot(slot) {
   const start = new Date(slot.starts_at)
   const end   = new Date(slot.ends_at)
-  const date  = start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-  const from  = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-  const to    = end.toLocaleTimeString('en-GB',   { hour: '2-digit', minute: '2-digit' })
+  const date  = start.toLocaleDateString(dateLocale.value, { weekday: 'short', day: 'numeric', month: 'short' })
+  const from  = start.toLocaleTimeString(dateLocale.value, { hour: '2-digit', minute: '2-digit' })
+  const to    = end.toLocaleTimeString(dateLocale.value,   { hour: '2-digit', minute: '2-digit' })
   return `${date}, ${from} – ${to}`
 }
 
@@ -149,13 +153,13 @@ async function submitVotes() {
   voteError.value = null
 
   if (!editingParticipantId.value && !name.value.trim()) {
-    voteError.value = 'Please enter your name.'
+    voteError.value = t('poll.errors.nameRequired')
     return
   }
 
   const unvoted = poll.value.time_slots.filter(s => votes[s.id] === undefined)
   if (unvoted.length > 0) {
-    voteError.value = 'Please mark every slot before submitting.'
+    voteError.value = t('poll.errors.allSlots')
     return
   }
 

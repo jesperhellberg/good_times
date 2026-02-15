@@ -1,19 +1,19 @@
 <template>
   <div class="container">
     <header class="page-header">
-      <p class="eyebrow">Good Times</p>
-      <h1>New poll</h1>
+      <p class="eyebrow">{{ t('landing.eyebrow') }}</p>
+      <h1>{{ t('admin.title') }}</h1>
       <p class="text-muted" style="margin-top: 0.5rem">
-        Set up a time slot poll and share the link with your group.
+        {{ t('admin.subtitle') }}
       </p>
     </header>
 
     <div class="card" style="margin-bottom: 1.5rem;">
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
         <div>
-          <h2 style="margin: 0;">All polls</h2>
+          <h2 style="margin: 0;">{{ t('admin.allPolls') }}</h2>
           <p class="text-muted text-sm" style="margin: 0.4rem 0 0;">
-            Admin view of every event in the system.
+            {{ t('admin.allPollsSubtitle') }}
           </p>
         </div>
         <button
@@ -23,19 +23,19 @@
           :disabled="eventsLoading"
           @click="loadEvents"
         >
-          {{ eventsLoading ? 'Refreshing…' : 'Refresh' }}
+          {{ eventsLoading ? t('admin.refreshing') : t('admin.refresh') }}
         </button>
       </div>
 
       <div style="margin-top: 1rem;">
         <p v-if="eventsLoading && !events.length" class="text-muted text-sm">
-          Loading events…
+          {{ t('admin.loadingEvents') }}
         </p>
         <p v-else-if="eventsError" class="text-sm" style="color: var(--no);">
           {{ eventsError }}
         </p>
         <p v-else-if="!events.length" class="text-muted text-sm">
-          No polls yet.
+          {{ t('admin.noPolls') }}
         </p>
         <ul v-else class="text-sm" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem;">
           <li
@@ -45,7 +45,7 @@
           >
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
               <a :href="`/poll/${event.id}`" style="font-weight: 600;">
-                {{ event.title || 'Untitled poll' }}
+                {{ event.title || t('common.untitled') }}
               </a>
               <button
                 type="button"
@@ -53,14 +53,14 @@
                 style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
                 :disabled="deletingId"
                 @click="deleteEvent(event)"
-                :aria-label="deletingId === event.id ? 'Deleting poll' : 'Delete poll'"
-                :title="deletingId === event.id ? 'Deleting…' : 'Delete poll'"
+                :aria-label="deletingId === event.id ? t('admin.deleting') : t('admin.delete')"
+                :title="deletingId === event.id ? t('admin.deleting') : t('admin.delete')"
               >
-                {{ deletingId === event.id ? 'Deleting…' : '🗑' }}
+                {{ deletingId === event.id ? t('admin.deleting') : '🗑' }}
               </button>
             </div>
             <span class="text-muted" style="font-size: 0.8rem;">
-              Created {{ formatDate(event.created_at) }}
+              {{ t('admin.createdAt', { date: formatDate(event.created_at) }) }}
             </span>
             <span v-if="event.description" class="text-muted">
               {{ event.description }}
@@ -74,23 +74,26 @@
       <div class="card" style="display: flex; flex-direction: column; gap: 1.25rem;">
 
         <div class="field">
-          <label for="title">Poll title</label>
+          <label for="title">{{ t('admin.form.titleLabel') }}</label>
           <input
             id="title"
             v-model="form.title"
             type="text"
-            placeholder="e.g. Summer dinner"
+            :placeholder="t('admin.form.titlePlaceholder')"
             required
             autofocus
           />
         </div>
 
         <div class="field">
-          <label for="description">Description <span class="text-muted">(optional)</span></label>
+          <label for="description">
+            {{ t('admin.form.descriptionLabel') }}
+            <span class="text-muted">({{ t('common.optional') }})</span>
+          </label>
           <textarea
             id="description"
             v-model="form.description"
-            placeholder="Any details the group should know…"
+            :placeholder="t('admin.form.descriptionPlaceholder')"
           />
         </div>
 
@@ -99,11 +102,11 @@
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
             <label class="field" style="gap: 0;">
               <span style="font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted);">
-                Time slots
+                {{ t('admin.timeSlots') }}
               </span>
             </label>
             <button type="button" class="btn btn-ghost" style="padding: 0.4rem 0.9rem; font-size: 0.85rem;" @click="addSlot">
-              + Add slot
+              {{ t('admin.addSlot') }}
             </button>
           </div>
 
@@ -114,8 +117,8 @@
               class="slot-row"
             >
               <span class="slot-index text-muted text-sm">{{ i + 1 }}</span>
-              <div class="field" style="flex: 1; gap: 0.25rem;">
-                <label :for="`slot-start-${i}`" class="sr-only">Start</label>
+            <div class="field" style="flex: 1; gap: 0.25rem;">
+                <label :for="`slot-start-${i}`" class="sr-only">{{ t('admin.form.startLabel') }}</label>
                 <FlatPickr
                   :id="`slot-start-${i}`"
                   v-model="slot.starts_at"
@@ -123,8 +126,8 @@
                 />
               </div>
               <span class="text-muted text-sm" style="padding: 0 0.25rem;">→</span>
-              <div class="field" style="flex: 1; gap: 0.25rem;">
-                <label :for="`slot-end-${i}`" class="sr-only">End</label>
+            <div class="field" style="flex: 1; gap: 0.25rem;">
+                <label :for="`slot-end-${i}`" class="sr-only">{{ t('admin.form.endLabel') }}</label>
                 <FlatPickr
                   :id="`slot-end-${i}`"
                   v-model="slot.ends_at"
@@ -149,7 +152,7 @@
 
         <div style="display: flex; justify-content: flex-end; padding-top: 0.5rem;">
           <button type="submit" class="btn btn-primary" :disabled="submitting">
-            {{ submitting ? 'Creating…' : 'Create poll' }}
+            {{ submitting ? t('admin.creating') : t('admin.createPoll') }}
           </button>
         </div>
 
@@ -162,13 +165,15 @@
     <!-- Share link shown after creation -->
     <transition name="fade">
       <div v-if="createdId" class="card" style="margin-top: 1.5rem;">
-        <p class="text-sm text-muted" style="margin-bottom: 0.5rem;">Poll created — share this link:</p>
+        <p class="text-sm text-muted" style="margin-bottom: 0.5rem;">
+          {{ t('admin.shareTitle') }}
+        </p>
         <div style="display: flex; gap: 0.75rem; align-items: center;">
           <code style="flex: 1; background: var(--paper-2); padding: 0.6rem 0.9rem; border-radius: var(--radius); font-size: 0.9rem; word-break: break-all;">
             {{ shareUrl }}
           </code>
           <button class="btn btn-ghost" style="white-space: nowrap;" @click="copyLink">
-            {{ copied ? 'Copied!' : 'Copy link' }}
+            {{ copied ? t('admin.copied') : t('admin.copyLink') }}
           </button>
         </div>
       </div>
@@ -182,7 +187,10 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import FlatPickr from 'vue-flatpickr-component'
 import 'flatpickr/dist/flatpickr.css'
+import { useI18n } from 'vue-i18n'
 import { api } from '../api'
+
+const { t, locale } = useI18n()
 
 const form = reactive({
   title: '',
@@ -203,6 +211,8 @@ const deletingId    = ref(null)
 const shareUrl = computed(() =>
   createdId.value ? `${window.location.origin}/poll/${createdId.value}` : ''
 )
+
+const dateLocale = computed(() => (locale.value === 'sv' ? 'sv-SE' : 'en-GB'))
 
 const pickerConfig = {
   enableTime: true,
@@ -228,11 +238,11 @@ function validate() {
 
   for (const slot of form.slots) {
     if (!slot.starts_at || !slot.ends_at) {
-      slotError.value = 'Please fill in all time slots.'
+      slotError.value = t('admin.errors.slotMissing')
       return false
     }
     if (slot.ends_at <= slot.starts_at) {
-      slotError.value = "Each slot's end time must be after its start time."
+      slotError.value = t('admin.errors.slotOrder')
       return false
     }
   }
@@ -274,7 +284,7 @@ async function copyLink() {
 
 async function deleteEvent(event) {
   if (deletingId.value) return
-  if (!confirm(`Delete "${event.title || 'Untitled poll'}"? This cannot be undone.`)) {
+  if (!confirm(t('admin.deleteConfirm', { title: event.title || t('common.untitled') }))) {
     return
   }
 
@@ -294,7 +304,7 @@ async function deleteEvent(event) {
 function formatDate(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(dateLocale.value, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

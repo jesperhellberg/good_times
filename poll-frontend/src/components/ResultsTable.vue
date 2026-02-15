@@ -28,8 +28,8 @@
               <button
                 type="button"
                 class="edit-btn"
-                aria-label="Edit availability"
-                title="Edit availability"
+                :aria-label="t('poll.editAvailability')"
+                :title="t('poll.editAvailability')"
                 @click="$emit('edit-participant', participant)"
               >✎</button>
             </div>
@@ -47,7 +47,7 @@
         </tr>
         <tr v-if="poll.participants.length === 0">
           <td :colspan="poll.time_slots.length + 1" class="empty-row">
-            No responses yet — be the first!
+            {{ t('poll.emptyResponses') }}
           </td>
         </tr>
       </tbody>
@@ -57,10 +57,15 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
   poll: { type: Object, required: true },
 })
+
+const { t, locale } = useI18n()
+
+const dateLocale = computed(() => (locale.value === 'sv' ? 'sv-SE' : 'en-GB'))
 
 defineEmits(['edit-participant'])
 
@@ -87,14 +92,14 @@ function cellIcon(participant, slot) {
 }
 
 function slotDate(slot) {
-  return new Date(slot.starts_at).toLocaleDateString('en-GB', {
+  return new Date(slot.starts_at).toLocaleDateString(dateLocale.value, {
     weekday: 'short', day: 'numeric', month: 'short',
   })
 }
 
 function slotTime(slot) {
-  const from = new Date(slot.starts_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-  const to   = new Date(slot.ends_at).toLocaleTimeString('en-GB',   { hour: '2-digit', minute: '2-digit' })
+  const from = new Date(slot.starts_at).toLocaleTimeString(dateLocale.value, { hour: '2-digit', minute: '2-digit' })
+  const to   = new Date(slot.ends_at).toLocaleTimeString(dateLocale.value,   { hour: '2-digit', minute: '2-digit' })
   return `${from}–${to}`
 }
 </script>
