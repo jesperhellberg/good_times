@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: ./poll-backend
+    environment:
+      DATABASE_URL: sqlite:///data/poll.db
+      RUST_LOG: info
+    volumes:
+      - ./containerdb:/data
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build: ./poll-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  sqlite_data:
