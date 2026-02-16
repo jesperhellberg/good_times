@@ -5,64 +5,85 @@ use axum::{
 };
 use sqlx::SqlitePool;
 
-use crate::models::{ParticipantResponse, PollResponse, TimeSlotResponse, VoteResponse};
+use crate::models::{EventRow, ParticipantResponse, PollResponse, TimeSlotResponse, VoteResponse};
+
+#[derive(sqlx::FromRow)]
+struct TimeSlotWithCount {
+    id: String,
+    starts_at: String,
+    ends_at: String,
+    available_count: i64,
+}
+
+#[derive(sqlx::FromRow)]
+struct ParticipantNameRow {
+    id: String,
+    name: String,
+}
+
+#[derive(sqlx::FromRow)]
+struct VoteRow {
+    participant_id: String,
+    time_slot_id: String,
+    available: i64,
+}
 
 pub async fn get_poll(
     State(pool): State<SqlitePool>,
     Path(event_id): Path<String>,
 ) -> Result<Json<PollResponse>, StatusCode> {
     // Fetch the event
-    let event = sqlx::query!(
-        "SELECT id as \"id!\", title, description, created_at FROM events WHERE id = ?",
-        event_id
+    let event = sqlx::query_as::<_, EventRow>(
+        "SELECT id, title, description, created_at FROM events WHERE id = ?",
     )
+    .bind(&event_id)
     .fetch_optional(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     .ok_or(StatusCode::NOT_FOUND)?;
 
     // Fetch time slots with vote counts
-    let slots = sqlx::query!(
+    let slots = sqlx::query_as::<_, TimeSlotWithCount>(
         r#"
         SELECT
-            ts.id as "id!",
+            ts.id,
             ts.starts_at,
             ts.ends_at,
-            COUNT(CASE WHEN v.available = 1 THEN 1 END) AS "available_count!"
+            COUNT(CASE WHEN v.available = 1 THEN 1 END) AS available_count
         FROM time_slots ts
         LEFT JOIN votes v ON v.time_slot_id = ts.id
         WHERE ts.event_id = ?
         GROUP BY ts.id
         ORDER BY ts.starts_at ASC
         "#,
-        event_id
     )
+    .bind(&event_id)
     .fetch_all(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Fetch participants
-    let participants = sqlx::query!(
-        "SELECT id as \"id!\", name FROM participants WHERE event_id = ? ORDER BY created_at ASC",
-        event_id
+    let participants = sqlx::query_as::<_, ParticipantNameRow>(
+        "SELECT id, name FROM participants WHERE event_id = ? ORDER BY created_at ASC",
     )
+    .bind(&event_id)
     .fetch_all(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Fetch all votes for this event in one query
-    let votes = sqlx::query!(
+    let votes = sqlx::query_as::<_, VoteRow>(
         r#"
         SELECT
-            v.participant_id as "participant_id!",
-            v.time_slot_id as "time_slot_id!",
-            v.available as "available!"
+            v.participant_id,
+            v.time_slot_id,
+            v.available
         FROM votes v
         JOIN time_slots ts ON ts.id = v.time_slot_id
         WHERE ts.event_id = ?
         "#,
-        event_id
     )
+    .bind(&event_id)
     .fetch_all(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

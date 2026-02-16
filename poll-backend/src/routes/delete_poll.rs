@@ -10,7 +10,8 @@ pub async fn delete_poll(
     State(pool): State<SqlitePool>,
     Path(id): Path<String>,
 ) -> Result<Json<DeletePollResponse>, StatusCode> {
-    let result = sqlx::query!("DELETE FROM events WHERE id = ?", id)
+    let result = sqlx::query("DELETE FROM events WHERE id = ?")
+        .bind(&id)
         .execute(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

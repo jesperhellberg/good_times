@@ -6,7 +6,11 @@ use axum::{
     Router,
 };
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use std::{net::SocketAddr, str::FromStr};
+use std::{
+    net::SocketAddr,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -32,6 +36,17 @@ async fn main() -> anyhow::Result<()> {
     let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
 
+    let (sqlite_path, sqlite_existed) = match sqlite_path_from_url(&database_url) {
+        Some(path) => {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let existed = path.exists();
+            (Some(path), existed)
+        }
+        None => (None, true),
+    };
+
     // Set up the database pool
     let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
 
@@ -43,6 +58,9 @@ async fn main() -> anyhow::Result<()> {
     // Run migrations
     sqlx::migrate!("./migrations").run(&pool).await?;
 
+    if let (Some(path), false) = (sqlite_path, sqlite_existed) {
+        tracing::info!("Created new database at {}", path.display());
+    }
     tracing::info!("Database ready");
 
     // CORS — allow all origins for local dev; tighten this for production
@@ -67,4 +85,14 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, app).await?;
 
     Ok(())
+}
+
+fn sqlite_path_from_url(database_url: &str) -> Option<PathBuf> {
+    let rest = database_url.strip_prefix("sqlite:")?;
+    let path = rest.trim_start_matches("//");
+    if path.is_empty() {
+        None
+    } else {
+        Some(Path::new(path).to_path_buf())
+    }
 }

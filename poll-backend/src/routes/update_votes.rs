@@ -21,11 +21,10 @@ pub async fn update_votes(
         return Err(StatusCode::UNPROCESSABLE_ENTITY);
     }
 
-    let participant_exists = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM participants WHERE id = ? AND event_id = ?",
-        participant_id,
-        event_id
-    )
+    let participant_exists: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM participants WHERE id = ? AND event_id = ?")
+            .bind(&participant_id)
+            .bind(&event_id)
     .fetch_one(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -35,11 +34,10 @@ pub async fn update_votes(
     }
 
     for vote in &payload.votes {
-        let slot_valid = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM time_slots WHERE id = ? AND event_id = ?",
-            vote.time_slot_id,
-            event_id
-        )
+        let slot_valid: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM time_slots WHERE id = ? AND event_id = ?")
+                .bind(&vote.time_slot_id)
+                .bind(&event_id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -54,30 +52,30 @@ pub async fn update_votes(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         DELETE FROM votes
         WHERE participant_id = ?
           AND time_slot_id IN (SELECT id FROM time_slots WHERE event_id = ?)
         "#,
-        participant_id,
-        event_id
     )
+    .bind(&participant_id)
+    .bind(&event_id)
     .execute(&mut *tx)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     for vote in payload.votes {
         let available = vote.available;
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO votes (participant_id, time_slot_id, available)
             VALUES (?, ?, ?)
             "#,
-            participant_id,
-            vote.time_slot_id,
-            available,
         )
+        .bind(&participant_id)
+        .bind(&vote.time_slot_id)
+        .bind(available)
         .execute(&mut *tx)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

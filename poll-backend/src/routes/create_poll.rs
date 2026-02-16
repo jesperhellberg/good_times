@@ -28,13 +28,11 @@ pub async fn create_poll(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    sqlx::query!(
-        "INSERT INTO events (id, title, description, created_at) VALUES (?, ?, ?, ?)",
-        event.id,
-        event.title,
-        event.description,
-        event.created_at,
-    )
+    sqlx::query("INSERT INTO events (id, title, description, created_at) VALUES (?, ?, ?, ?)")
+        .bind(&event.id)
+        .bind(&event.title)
+        .bind(&event.description)
+        .bind(&event.created_at)
     .execute(&mut *tx)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -42,13 +40,11 @@ pub async fn create_poll(
     for slot_input in payload.time_slots {
         let slot = TimeSlotRow::new(&event.id, slot_input.starts_at, slot_input.ends_at);
 
-        sqlx::query!(
-            "INSERT INTO time_slots (id, event_id, starts_at, ends_at) VALUES (?, ?, ?, ?)",
-            slot.id,
-            slot.event_id,
-            slot.starts_at,
-            slot.ends_at,
-        )
+        sqlx::query("INSERT INTO time_slots (id, event_id, starts_at, ends_at) VALUES (?, ?, ?, ?)")
+            .bind(&slot.id)
+            .bind(&slot.event_id)
+            .bind(&slot.starts_at)
+            .bind(&slot.ends_at)
         .execute(&mut *tx)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

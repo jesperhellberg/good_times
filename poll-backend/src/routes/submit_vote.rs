@@ -19,7 +19,9 @@ pub async fn submit_vote(
     }
 
     // Verify event exists
-    let event_exists = sqlx::query_scalar!("SELECT COUNT(*) FROM events WHERE id = ?", event_id)
+    let event_exists: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM events WHERE id = ?")
+            .bind(&event_id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -30,11 +32,10 @@ pub async fn submit_vote(
 
     // Verify all submitted time_slot_ids actually belong to this event
     for vote in &payload.votes {
-        let slot_valid = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM time_slots WHERE id = ? AND event_id = ?",
-            vote.time_slot_id,
-            event_id
-        )
+        let slot_valid: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM time_slots WHERE id = ? AND event_id = ?")
+                .bind(&vote.time_slot_id)
+                .bind(&event_id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -51,29 +52,27 @@ pub async fn submit_vote(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    sqlx::query!(
-        "INSERT INTO participants (id, event_id, name, created_at) VALUES (?, ?, ?, ?)",
-        participant.id,
-        participant.event_id,
-        participant.name,
-        participant.created_at,
-    )
+    sqlx::query("INSERT INTO participants (id, event_id, name, created_at) VALUES (?, ?, ?, ?)")
+        .bind(&participant.id)
+        .bind(&participant.event_id)
+        .bind(&participant.name)
+        .bind(&participant.created_at)
     .execute(&mut *tx)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     for vote in payload.votes {
         let available = vote.available;
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO votes (participant_id, time_slot_id, available)
             VALUES (?, ?, ?)
             ON CONFLICT (participant_id, time_slot_id) DO UPDATE SET available = excluded.available
             "#,
-            participant.id,
-            vote.time_slot_id,
-            available,
         )
+        .bind(&participant.id)
+        .bind(&vote.time_slot_id)
+        .bind(available)
         .execute(&mut *tx)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

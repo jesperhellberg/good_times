@@ -77,7 +77,7 @@ pub struct PollResponse {
     pub participants: Vec<ParticipantResponse>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct EventSummaryResponse {
     pub id: String,
     pub title: String,

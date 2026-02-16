@@ -1,6 +1,7 @@
-FROM rust:1.93.1 as builder
+FROM rust:1.93.1 AS builder
 WORKDIR /app
 COPY . .
+ENV DATABASE_URL=sqlite:///tmp/sqlx.db
 RUN cargo build --release
 
 FROM debian:bookworm-slim
