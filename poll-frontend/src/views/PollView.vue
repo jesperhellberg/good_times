@@ -146,7 +146,7 @@ function formatSlot(slot) {
   const date  = start.toLocaleDateString(dateLocale.value, { weekday: 'short', day: 'numeric', month: 'short' })
   const from  = start.toLocaleTimeString(dateLocale.value, { hour: '2-digit', minute: '2-digit' })
   const to    = end.toLocaleTimeString(dateLocale.value,   { hour: '2-digit', minute: '2-digit' })
-  return `${date}, ${from} – ${to}`
+  return `${date} ${from} – ${to}`
 }
 
 async function submitVotes() {

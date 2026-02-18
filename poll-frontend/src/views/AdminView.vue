@@ -113,25 +113,39 @@
           <div style="display: flex; flex-direction: column; gap: 0.6rem;">
             <div
               v-for="(slot, i) in form.slots"
-              :key="i"
+              :key="slot.id"
               class="slot-row"
             >
               <span class="slot-index text-muted text-sm">{{ i + 1 }}</span>
             <div class="field" style="flex: 1; gap: 0.25rem;">
-                <label :for="`slot-start-${i}`" class="sr-only">{{ t('admin.form.startLabel') }}</label>
-                <FlatPickr
-                  :id="`slot-start-${i}`"
+                <label :for="`slot-start-${slot.id}`" class="sr-only">{{ t('admin.form.startLabel') }}</label>
+                <VueDatePicker
+                  :id="`slot-start-${slot.id}`"
                   v-model="slot.starts_at"
-                  :config="pickerConfig"
+                  :locale="pickerLocale"
+                  :format="pickerFormat"
+                  :enable-time-picker="true"
+                  :minutes-increment="30"
+                  :is-24="true"
+                  :start-time="pickerStartTime"
+                  :clearable="false"
+                  @update:model-value="slot.starts_at = snapToHalfHour(slot.starts_at)"
                 />
               </div>
               <span class="text-muted text-sm" style="padding: 0 0.25rem;">→</span>
             <div class="field" style="flex: 1; gap: 0.25rem;">
-                <label :for="`slot-end-${i}`" class="sr-only">{{ t('admin.form.endLabel') }}</label>
-                <FlatPickr
-                  :id="`slot-end-${i}`"
+                <label :for="`slot-end-${slot.id}`" class="sr-only">{{ t('admin.form.endLabel') }}</label>
+                <VueDatePicker
+                  :id="`slot-end-${slot.id}`"
                   v-model="slot.ends_at"
-                  :config="pickerConfig"
+                  :locale="pickerLocale"
+                  :format="pickerFormat"
+                  :enable-time-picker="true"
+                  :minutes-increment="30"
+                  :is-24="true"
+                  :start-time="pickerStartTime"
+                  :clearable="false"
+                  @update:model-value="slot.ends_at = snapToHalfHour(slot.ends_at)"
                 />
               </div>
               <button
@@ -185,17 +199,20 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
-import FlatPickr from 'vue-flatpickr-component'
-import 'flatpickr/dist/flatpickr.css'
+import VueDatePicker from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 
 const { t, locale } = useI18n()
 
+const createSlotId = () =>
+  (crypto?.randomUUID ? crypto.randomUUID() : `slot-${Date.now()}-${Math.random().toString(16).slice(2)}`)
+
 const form = reactive({
   title: '',
   description: '',
-  slots: [{ starts_at: '', ends_at: '' }],
+  slots: [{ id: createSlotId(), starts_at: null, ends_at: null }],
 })
 
 const submitting = ref(false)
@@ -213,19 +230,27 @@ const shareUrl = computed(() =>
 )
 
 const dateLocale = computed(() => (locale.value === 'sv' ? 'sv-SE' : 'en-GB'))
+const pickerLocale = computed(() => (locale.value === 'sv' ? 'sv' : 'en-GB'))
+const pickerFormat = 'yyyy-MM-dd HH:mm'
+const pickerStartTime = { hours: 0, minutes: 0 }
 
-const pickerConfig = {
-  enableTime: true,
-  time_24hr: true,
-  minuteIncrement: 30,
-  dateFormat: "Y-m-d\\TH:i",
-  altInput: true,
-  altFormat: "Y-m-d H:i",
-  altInputClass: "alt-datetime-input",
+const snapToHalfHour = (value) => {
+  if (!value) return value
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const minutes = date.getMinutes()
+  const snapped = minutes < 15 ? 0 : minutes < 45 ? 30 : 60
+  if (snapped === 60) {
+    date.setHours(date.getHours() + 1)
+    date.setMinutes(0, 0, 0)
+  } else {
+    date.setMinutes(snapped, 0, 0)
+  }
+  return date
 }
 
 function addSlot() {
-  form.slots.push({ starts_at: '', ends_at: '' })
+  form.slots.push({ id: createSlotId(), starts_at: null, ends_at: null })
 }
 
 function removeSlot(i) {
@@ -237,11 +262,13 @@ function validate() {
   error.value = null
 
   for (const slot of form.slots) {
-    if (!slot.starts_at || !slot.ends_at) {
+    const start = slot.starts_at ? new Date(slot.starts_at) : null
+    const end = slot.ends_at ? new Date(slot.ends_at) : null
+    if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
       slotError.value = t('admin.errors.slotMissing')
       return false
     }
-    if (slot.ends_at <= slot.starts_at) {
+    if (end <= start) {
       slotError.value = t('admin.errors.slotOrder')
       return false
     }
@@ -326,7 +353,9 @@ async function loadEvents() {
   }
 }
 
-onMounted(loadEvents)
+onMounted(() => {
+  loadEvents()
+})
 </script>
 
 <style scoped>
@@ -334,19 +363,75 @@ onMounted(loadEvents)
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem;
+  border: 1px solid var(--paper-2);
+  border-radius: var(--radius);
+  background: var(--paper);
 }
 
 .slot-index {
-  width: 1.25rem;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   flex-shrink: 0;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--paper-2);
+  font-weight: 600;
 }
 
-:deep(.alt-datetime-input) {
-  padding-right: 2.2rem;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='18' height='18' rx='2' ry='2'/><line x1='16' y1='2.5' x2='16' y2='6.5'/><line x1='8' y1='2.5' x2='8' y2='6.5'/><line x1='3' y1='10' x2='21' y2='10'/></svg>");
+.slot-row .field {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+:deep(.dp__input) {
+  width: 100%;
+  min-width: 0;
+  border-radius: var(--radius);
+  border-color: var(--paper-2);
+  font-size: 1rem;
+}
+
+:deep(.dp__input_focus) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+:deep(.dp__input_wrap) {
+  position: relative;
+}
+
+:deep(.dp__input_icon) {
+  display: none !important;
+}
+
+:deep(.dp__input_wrap .dp__input_icon_pad),
+:deep(.dp__input_wrap .dp__input) {
+  padding-right: 3.4rem !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='%236b6b6b'><path d='M29.333 8c0-2.208-1.792-4-4-4h-18.667c-2.208 0-4 1.792-4 4v18.667c0 2.208 1.792 4 4 4h18.667c2.208 0 4-1.792 4-4v-18.667zM26.667 8v18.667c0 0.736-0.597 1.333-1.333 1.333 0 0-18.667 0-18.667 0-0.736 0-1.333-0.597-1.333-1.333 0 0 0-18.667 0-18.667 0-0.736 0.597-1.333 1.333-1.333 0 0 18.667 0 18.667 0 0.736 0 1.333 0.597 1.333 1.333z'/><path d='M20 2.667v5.333c0 0.736 0.597 1.333 1.333 1.333s1.333-0.597 1.333-1.333v-5.333c0-0.736-0.597-1.333-1.333-1.333s-1.333 0.597-1.333 1.333z'/><path d='M9.333 2.667v5.333c0 0.736 0.597 1.333 1.333 1.333s1.333-0.597 1.333-1.333v-5.333c0-0.736-0.597-1.333-1.333-1.333s-1.333 0.597-1.333 1.333z'/><path d='M4 14.667h24c0.736 0 1.333-0.597 1.333-1.333s-0.597-1.333-1.333-1.333h-24c-0.736 0-1.333 0.597-1.333 1.333s0.597 1.333 1.333 1.333z'/></svg>");
   background-repeat: no-repeat;
-  background-position: right 0.7rem center;
+  background-position: right 0.85rem center;
   background-size: 16px 16px;
+}
+
+@media (max-width: 600px) {
+  .slot-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+  }
+
+  .slot-index {
+    align-self: flex-start;
+  }
+
+  .slot-row .text-sm {
+    align-self: center;
+  }
 }
 </style>

@@ -44,6 +44,7 @@ function setLocale(value) {
   border-radius: 999px;
   box-shadow: var(--shadow-sm);
   z-index: 10;
+  max-width: calc(100vw - 1.5rem);
 }
 
 .locale-btn {
@@ -61,5 +62,18 @@ function setLocale(value) {
 .locale-btn.active {
   background: var(--paper-2);
   color: var(--ink);
+}
+
+@media (max-width: 600px) {
+  .locale-toggle {
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.2rem;
+  }
+
+  .locale-btn {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.4rem;
+  }
 }
 </style>

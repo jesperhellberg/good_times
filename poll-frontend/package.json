@@ -8,9 +8,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "flatpickr": "^4.6.13",
-    "vue": "^3.4.0",
-    "vue-flatpickr-component": "^11.0.3",
+    "@vuepic/vue-datepicker": "^11.0.0",
+    "vue": "^3.5.0",
     "vue-i18n": "^9.10.2",
     "vue-router": "^4.3.0"
   },
