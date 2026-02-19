@@ -14,7 +14,7 @@
 
     <template v-else-if="poll">
       <header class="page-header">
-        <router-link class="eyebrow" to="/">Good Times</router-link>
+        <router-link class="eyebrow" :to="homeTarget">Good Times</router-link>
         <h1>{{ poll.title }}</h1>
         <p v-if="poll.description" class="text-muted" style="margin-top: 0.5rem;">
           {{ poll.description }}
@@ -95,13 +95,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 import ResultsTable from '../components/ResultsTable.vue'
 
 const { t, locale } = useI18n()
+const authState = inject('authState', null)
 
 const route = useRoute()
 const pollId = route.params.id
@@ -118,6 +119,7 @@ const submitted   = ref(false)
 const submittedName = ref('')
 const editingParticipantId = ref(null)
 const dateLocale = computed(() => (locale.value === 'sv' ? 'sv-SE' : 'en-GB'))
+const homeTarget = computed(() => (authState?.isAuthed?.value ? '/admin' : '/'))
 
 async function loadPoll() {
   loading.value    = true

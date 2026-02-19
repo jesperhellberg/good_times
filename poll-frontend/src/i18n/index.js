@@ -16,7 +16,9 @@ const messages = {
       title: 'Admin access',
       subtitle: 'Sign in to create and manage your polls.',
       nameLabel: 'Name',
+      namePlaceholder: 'Your name',
       passwordLabel: 'Password',
+      passwordPlaceholder: 'Enter password',
       login: 'Log in',
       signup: 'Sign up',
       switchToSignup: 'Need an account? Sign up',
@@ -27,6 +29,7 @@ const messages = {
       signedInAs: 'Signed in as {name}',
       errors: {
         required: 'Please enter a name and password.',
+        invalidCredentials: 'Wrong username or password',
       },
     },
     admin: {
@@ -103,7 +106,9 @@ const messages = {
       title: 'Adminåtkomst',
       subtitle: 'Logga in för att skapa och hantera dina omröstningar.',
       nameLabel: 'Namn',
+      namePlaceholder: 'Ditt namn',
       passwordLabel: 'Lösenord',
+      passwordPlaceholder: 'Ange lösenord',
       login: 'Logga in',
       signup: 'Skapa konto',
       switchToSignup: 'Behöver du ett konto? Skapa ett',
@@ -114,6 +119,7 @@ const messages = {
       signedInAs: 'Inloggad som {name}',
       errors: {
         required: 'Skriv in namn och lösenord.',
+        invalidCredentials: 'Fel användarnamn eller lösenord',
       },
     },
     admin: {

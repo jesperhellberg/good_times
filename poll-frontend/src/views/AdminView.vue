@@ -1,74 +1,12 @@
 <template>
   <div class="container">
     <header class="page-header">
-      <router-link class="eyebrow" to="/">{{ t('landing.eyebrow') }}</router-link>
+      <router-link class="eyebrow" :to="homeTarget">{{ t('landing.eyebrow') }}</router-link>
       <h1>{{ t('admin.title') }}</h1>
       <p class="text-muted" style="margin-top: 0.5rem">
         {{ t('admin.subtitle') }}
       </p>
     </header>
-
-    <div class="card" style="margin-bottom: 1.5rem;">
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-        <div>
-          <h2 style="margin: 0;">{{ t('admin.allPolls') }}</h2>
-          <p class="text-muted text-sm" style="margin: 0.4rem 0 0;">
-            {{ t('admin.allPollsSubtitle') }}
-          </p>
-        </div>
-        <button
-          type="button"
-          class="btn btn-ghost"
-          style="white-space: nowrap;"
-          :disabled="eventsLoading"
-          @click="loadEvents"
-        >
-          {{ eventsLoading ? t('admin.refreshing') : t('admin.refresh') }}
-        </button>
-      </div>
-
-      <div style="margin-top: 1rem;">
-        <p v-if="eventsLoading && !events.length" class="text-muted text-sm">
-          {{ t('admin.loadingEvents') }}
-        </p>
-        <p v-else-if="eventsError" class="text-sm" style="color: var(--no);">
-          {{ eventsError }}
-        </p>
-        <p v-else-if="!events.length" class="text-muted text-sm">
-          {{ t('admin.noPolls') }}
-        </p>
-        <ul v-else class="text-sm" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem;">
-          <li
-            v-for="event in events"
-            :key="event.id"
-            style="display: flex; flex-direction: column; gap: 0.25rem;"
-          >
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
-              <a :href="`/poll/${event.id}`" style="font-weight: 600;">
-                {{ event.title || t('common.untitled') }}
-              </a>
-              <button
-                type="button"
-                class="btn btn-danger"
-                style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
-                :disabled="deletingId"
-                @click="deleteEvent(event)"
-                :aria-label="deletingId === event.id ? t('admin.deleting') : t('admin.delete')"
-                :title="deletingId === event.id ? t('admin.deleting') : t('admin.delete')"
-              >
-                {{ deletingId === event.id ? t('admin.deleting') : '🗑' }}
-              </button>
-            </div>
-            <span class="text-muted" style="font-size: 0.8rem;">
-              {{ t('admin.createdAt', { date: formatDate(event.created_at) }) }}
-            </span>
-            <span v-if="event.description" class="text-muted">
-              {{ event.description }}
-            </span>
-          </li>
-        </ul>
-      </div>
-    </div>
 
     <form @submit.prevent="submit" novalidate>
       <div class="card" style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -193,12 +131,74 @@
       </div>
     </transition>
 
+    <div class="card" style="margin-top: 1.5rem;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+        <div>
+          <h2 style="margin: 0;">{{ t('admin.allPolls') }}</h2>
+          <p class="text-muted text-sm" style="margin: 0.4rem 0 0;">
+            {{ t('admin.allPollsSubtitle') }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="btn btn-ghost"
+          style="white-space: nowrap;"
+          :disabled="eventsLoading"
+          @click="loadEvents"
+        >
+          {{ eventsLoading ? t('admin.refreshing') : t('admin.refresh') }}
+        </button>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <p v-if="eventsLoading && !events.length" class="text-muted text-sm">
+          {{ t('admin.loadingEvents') }}
+        </p>
+        <p v-else-if="eventsError" class="text-sm" style="color: var(--no);">
+          {{ eventsError }}
+        </p>
+        <p v-else-if="!events.length" class="text-muted text-sm">
+          {{ t('admin.noPolls') }}
+        </p>
+        <ul v-else class="text-sm" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem;">
+          <li
+            v-for="event in events"
+            :key="event.id"
+            style="display: flex; flex-direction: column; gap: 0.25rem;"
+          >
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+              <a :href="`/poll/${event.id}`" style="font-weight: 600;">
+                {{ event.title || t('common.untitled') }}
+              </a>
+              <button
+                type="button"
+                class="btn btn-danger"
+                style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"
+                :disabled="deletingId"
+                @click="deleteEvent(event)"
+                :aria-label="deletingId === event.id ? t('admin.deleting') : t('admin.delete')"
+                :title="deletingId === event.id ? t('admin.deleting') : t('admin.delete')"
+              >
+                {{ deletingId === event.id ? t('admin.deleting') : '🗑' }}
+              </button>
+            </div>
+            <span class="text-muted" style="font-size: 0.8rem;">
+              {{ t('admin.createdAt', { date: formatDate(event.created_at) }) }}
+            </span>
+            <span v-if="event.description" class="text-muted">
+              {{ event.description }}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
     <div style="height: 4rem;" />
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
@@ -207,6 +207,7 @@ import { api } from '../api'
 
 const { t, locale } = useI18n()
 const router = useRouter()
+const authState = inject('authState', null)
 
 const createSlotId = () =>
   (crypto?.randomUUID ? crypto.randomUUID() : `slot-${Date.now()}-${Math.random().toString(16).slice(2)}`)
@@ -227,6 +228,7 @@ const eventsLoading = ref(false)
 const eventsError   = ref(null)
 const deletingId    = ref(null)
 
+const homeTarget = computed(() => (authState?.isAuthed?.value ? '/admin' : '/'))
 const shareUrl = computed(() =>
   createdId.value ? `${window.location.origin}/poll/${createdId.value}` : ''
 )

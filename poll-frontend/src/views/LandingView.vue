@@ -1,8 +1,13 @@
 <template>
   <div class="container landing-stack">
-    <section class="landing-hero">
-      <div class="landing-copy">
-        <router-link class="eyebrow" to="/">{{ t('landing.eyebrow') }}</router-link>
+    <section
+      ref="heroRef"
+      class="landing-hero"
+      :class="{ 'is-auth-open': isAuthPanelOpen }"
+      :style="heroStyle"
+    >
+      <div class="landing-copy" v-show="!isAuthPanelOpen">
+        <router-link class="eyebrow" :to="homeTarget">{{ t('landing.eyebrow') }}</router-link>
         <h1 style="margin-top: 0.5rem;">{{ t('landing.title') }}</h1>
         <p class="text-muted" style="margin-top: 0.75rem; max-width: 38rem;">
           {{ t('landing.blurb1') }}
@@ -12,78 +17,57 @@
         </p>
       </div>
 
-      <div class="hero-panel">
+      <div class="hero-panel" v-show="isAuthPanelOpen">
         <div class="hero-panel-inner">
-          <div class="panel-kicker">Admin</div>
-          <h2 class="panel-title">{{ t('auth.title') }}</h2>
-          <p class="text-muted text-sm" style="margin: 0.25rem 0 0;">
-            {{ t('auth.subtitle') }}
-          </p>
-
-          <div v-if="isAuthed" class="auth-body">
-            <p class="text-sm" style="margin: 0;">
-              {{ t('auth.signedInAs', { name: adminName || '—' }) }}
-            </p>
-            <div class="auth-actions">
-              <button type="button" class="btn btn-primary" @click="goToAdmin">
-                {{ t('auth.goToAdmin') }}
-              </button>
-              <button type="button" class="btn btn-ghost" @click="logout">
-                {{ t('auth.logout') }}
-              </button>
+          <button
+            v-if="authPanel"
+            type="button"
+            class="auth-close"
+            aria-label="Close"
+            @click="authPanel.hide()"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+          <div class="auth-layout">
+            <div class="auth-intro">
+              <div class="panel-kicker">Admin</div>
+              <h2 class="panel-title">{{ mode === 'login' ? t('auth.login') : t('auth.signup') }}</h2>
             </div>
+
+            <form class="auth-body" @submit.prevent="submit" novalidate>
+              <div class="auth-fields">
+                <div class="field">
+                  <input
+                    id="admin-name"
+                    v-model="form.name"
+                    type="text"
+                    autocomplete="username"
+                    :placeholder="t('auth.namePlaceholder')"
+                    required
+                  />
+                </div>
+
+                <div class="field">
+                  <input
+                    id="admin-password"
+                    v-model="form.password"
+                    type="password"
+                    :autocomplete="mode === 'signup' ? 'new-password' : 'current-password'"
+                    :placeholder="t('auth.passwordPlaceholder')"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary auth-submit" :disabled="submitting">
+                {{ submitting ? t('auth.submitting') : mode === 'login' ? t('auth.login') : t('auth.signup') }}
+              </button>
+
+              <p v-if="error" class="text-sm" style="color: var(--no);">
+                {{ error }}
+              </p>
+            </form>
           </div>
-
-          <form v-else class="auth-body" @submit.prevent="submit" novalidate>
-            <div class="auth-toggle">
-              <button
-                type="button"
-                class="btn btn-ghost"
-                :class="{ active: mode === 'login' }"
-                @click="mode = 'login'"
-              >
-                {{ t('auth.login') }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-ghost"
-                :class="{ active: mode === 'signup' }"
-                @click="mode = 'signup'"
-              >
-                {{ t('auth.signup') }}
-              </button>
-            </div>
-
-            <div class="field">
-              <label for="admin-name">{{ t('auth.nameLabel') }}</label>
-              <input
-                id="admin-name"
-                v-model="form.name"
-                type="text"
-                autocomplete="username"
-                required
-              />
-            </div>
-
-            <div class="field">
-              <label for="admin-password">{{ t('auth.passwordLabel') }}</label>
-              <input
-                id="admin-password"
-                v-model="form.password"
-                type="password"
-                :autocomplete="mode === 'signup' ? 'new-password' : 'current-password'"
-                required
-              />
-            </div>
-
-            <button type="submit" class="btn btn-primary auth-submit" :disabled="submitting">
-              {{ submitting ? t('auth.submitting') : mode === 'login' ? t('auth.login') : t('auth.signup') }}
-            </button>
-
-            <p v-if="error" class="text-sm" style="color: var(--no);">
-              {{ error }}
-            </p>
-          </form>
         </div>
       </div>
     </section>
@@ -91,13 +75,18 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 
 const { t } = useI18n()
 const router = useRouter()
+const authPanel = inject('authPanel', null)
+const authState = inject('authState', null)
+const heroRef = ref(null)
+const heroHeight = ref(0)
+let resizeObserver
 
 const mode = ref('login')
 const form = reactive({
@@ -106,20 +95,70 @@ const form = reactive({
 })
 const submitting = ref(false)
 const error = ref(null)
-const adminName = ref(localStorage.getItem('adminName') || '')
+const isAuthPanelOpen = computed(() => authPanel?.open?.value ?? false)
+const homeTarget = computed(() => (authState?.isAuthed?.value ? '/admin' : '/'))
+const heroStyle = computed(() => (isAuthPanelOpen.value && heroHeight.value
+  ? { height: `${heroHeight.value}px` }
+  : {}))
 
-const isAuthed = computed(() => Boolean(localStorage.getItem('adminToken')))
+function updateHeroHeight(force = false) {
+  if (!heroRef.value || (!force && isAuthPanelOpen.value)) return
+  heroHeight.value = heroRef.value.offsetHeight || 0
+}
+
+function resetAuthForm() {
+  form.name = ''
+  form.password = ''
+  error.value = null
+  submitting.value = false
+}
+
+if (authPanel?.mode) {
+  watch(
+    () => authPanel.mode.value,
+    (nextMode) => {
+      mode.value = nextMode
+    },
+    { immediate: true }
+  )
+}
+
+watch(mode, (nextMode) => {
+  if (authPanel?.mode) {
+    authPanel.mode.value = nextMode
+  }
+})
+
+watch(
+  isAuthPanelOpen,
+  (nextOpen) => {
+    if (nextOpen) {
+      updateHeroHeight(true)
+    } else {
+      resetAuthForm()
+    }
+  },
+  { flush: 'pre' }
+)
+
+onMounted(() => {
+  updateHeroHeight()
+  if (heroRef.value && 'ResizeObserver' in window) {
+    resizeObserver = new ResizeObserver(() => updateHeroHeight())
+    resizeObserver.observe(heroRef.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (resizeObserver && heroRef.value) {
+    resizeObserver.unobserve(heroRef.value)
+    resizeObserver.disconnect()
+  }
+})
 
 function saveSession({ token, name }) {
   localStorage.setItem('adminToken', token)
   localStorage.setItem('adminName', name)
-  adminName.value = name
-}
-
-function clearSession() {
-  localStorage.removeItem('adminToken')
-  localStorage.removeItem('adminName')
-  adminName.value = ''
 }
 
 async function submit() {
@@ -140,24 +179,16 @@ async function submit() {
     saveSession(result)
     await router.push('/admin')
   } catch (e) {
-    error.value = e.message
+    if (e?.status === 401 || e?.status === 403) {
+      error.value = t('auth.errors.invalidCredentials')
+    } else {
+      error.value = e.message
+    }
   } finally {
     submitting.value = false
   }
 }
 
-async function logout() {
-  try {
-    await api.logoutAdmin()
-  } catch (_) {
-    // Ignore logout errors and clear local session anyway.
-  }
-  clearSession()
-}
-
-function goToAdmin() {
-  router.push('/admin')
-}
 </script>
 
 <style scoped>
@@ -174,7 +205,7 @@ function goToAdmin() {
 .landing-hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  grid-template-areas: "stack";
   gap: 2.8rem;
   padding: 2.4rem 2.4rem;
   border-radius: 18px;
@@ -184,6 +215,22 @@ function goToAdmin() {
     linear-gradient(135deg, #fff7ef 0%, #fff 55%, #f8f3ea 100%);
   border: 1px solid rgba(212, 98, 42, 0.15);
   overflow: hidden;
+}
+
+.landing-copy,
+.hero-panel {
+  grid-area: stack;
+}
+
+.landing-copy {
+  justify-self: start;
+  align-self: start;
+}
+
+.hero-panel {
+  justify-self: stretch;
+  align-self: start;
+  height: 100%;
 }
 
 .landing-hero::after {
@@ -205,13 +252,59 @@ function goToAdmin() {
 
 .hero-panel-inner {
   width: 100%;
-  max-width: 420px;
-  padding: 1.2rem 1.3rem;
+  max-width: 100%;
+  padding: 1.3rem 1.6rem;
   border-radius: 14px;
   border: 1px solid rgba(26, 26, 26, 0.08);
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(6px);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+  position: relative;
+  height: 100%;
+  overflow: auto;
+}
+
+.auth-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  align-items: center;
+  text-align: center;
+}
+
+.auth-intro {
+  max-width: 28rem;
+}
+
+.auth-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.auth-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(26, 26, 26, 0.12);
+  background: #fff;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+.auth-close:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .panel-kicker {
@@ -229,8 +322,9 @@ function goToAdmin() {
 .auth-body {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  margin-top: 1rem;
+  gap: 0.55rem;
+  margin-top: 0;
+  width: 100%;
 }
 
 .auth-title {
@@ -238,32 +332,10 @@ function goToAdmin() {
   font-size: 1.1rem;
 }
 
-.auth-toggle {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.auth-toggle .btn {
-  flex: 1;
-  padding: 0.45rem 0.8rem;
-  font-size: 0.8rem;
-}
-
-.auth-toggle .btn.active {
-  border-color: var(--accent);
-  color: var(--ink);
-  box-shadow: 0 0 0 3px var(--accent-dim);
-}
-
-.auth-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
 .auth-submit {
   padding: 0.5rem 1rem;
   font-size: 0.85rem;
+  align-self: stretch;
 }
 
 @media (max-width: 900px) {
@@ -273,8 +345,11 @@ function goToAdmin() {
   }
 
   .landing-hero {
-    grid-template-columns: 1fr;
     padding: 1.8rem 1.4rem;
+  }
+
+  .auth-fields {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -7,7 +7,7 @@
       @click="setLocale('en')"
       aria-label="Switch to English"
     >
-      EN
+      🇬🇧
     </button>
     <button
       type="button"
@@ -16,7 +16,7 @@
       @click="setLocale('sv')"
       aria-label="Byt till svenska"
     >
-      SV
+      🇸🇪
     </button>
   </div>
 </template>
@@ -46,10 +46,9 @@ function setLocale(value) {
   border: none;
   background: transparent;
   color: var(--ink-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 0.3rem 0.45rem;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
   border-radius: 999px;
   cursor: pointer;
 }
