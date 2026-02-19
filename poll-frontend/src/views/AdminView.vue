@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <header class="page-header">
-      <p class="eyebrow">{{ t('landing.eyebrow') }}</p>
+      <router-link class="eyebrow" to="/">{{ t('landing.eyebrow') }}</router-link>
       <h1>{{ t('admin.title') }}</h1>
       <p class="text-muted" style="margin-top: 0.5rem">
         {{ t('admin.subtitle') }}
@@ -199,12 +199,14 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 
 const { t, locale } = useI18n()
+const router = useRouter()
 
 const createSlotId = () =>
   (crypto?.randomUUID ? crypto.randomUUID() : `slot-${Date.now()}-${Math.random().toString(16).slice(2)}`)
@@ -233,6 +235,21 @@ const dateLocale = computed(() => (locale.value === 'sv' ? 'sv-SE' : 'en-GB'))
 const pickerLocale = computed(() => (locale.value === 'sv' ? 'sv' : 'en-GB'))
 const pickerFormat = 'yyyy-MM-dd HH:mm'
 const pickerStartTime = { hours: 0, minutes: 0 }
+
+const getAdminToken = () => localStorage.getItem('adminToken') || ''
+const clearAdminSession = () => {
+  localStorage.removeItem('adminToken')
+  localStorage.removeItem('adminName')
+}
+
+function handleAuthError(e) {
+  if (e && (e.status === 401 || e.status === 403)) {
+    clearAdminSession()
+    router.push('/')
+    return true
+  }
+  return false
+}
 
 const snapToHalfHour = (value) => {
   if (!value) return value
@@ -297,7 +314,9 @@ async function submit() {
     createdId.value = id
     await loadEvents()
   } catch (e) {
-    error.value = e.message
+    if (!handleAuthError(e)) {
+      error.value = e.message
+    }
   } finally {
     submitting.value = false
   }
@@ -322,7 +341,9 @@ async function deleteEvent(event) {
     await api.deletePoll(event.id)
     events.value = events.value.filter(item => item.id !== event.id)
   } catch (e) {
-    eventsError.value = e.message
+    if (!handleAuthError(e)) {
+      eventsError.value = e.message
+    }
   } finally {
     deletingId.value = null
   }
@@ -347,13 +368,19 @@ async function loadEvents() {
   try {
     events.value = await api.listEvents()
   } catch (e) {
-    eventsError.value = e.message
+    if (!handleAuthError(e)) {
+      eventsError.value = e.message
+    }
   } finally {
     eventsLoading.value = false
   }
 }
 
 onMounted(() => {
+  if (!getAdminToken()) {
+    router.push('/')
+    return
+  }
   loadEvents()
 })
 </script>

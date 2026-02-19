@@ -1,14 +1,19 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{extract::State, http::HeaderMap, http::StatusCode, Json};
 use sqlx::SqlitePool;
 
+use crate::auth::require_admin;
 use crate::models::EventSummaryResponse;
 
 pub async fn list_events(
     State(pool): State<SqlitePool>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<EventSummaryResponse>>, StatusCode> {
+    let admin = require_admin(&pool, &headers).await?;
+
     let events = sqlx::query_as::<_, EventSummaryResponse>(
-        "SELECT id, title, description, created_at FROM events ORDER BY created_at DESC",
+        "SELECT id, title, description, created_at FROM events WHERE admin_id = ? ORDER BY created_at DESC",
     )
+    .bind(&admin.admin_id)
     .fetch_all(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

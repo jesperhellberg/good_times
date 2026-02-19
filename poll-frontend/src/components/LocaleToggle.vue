@@ -33,9 +33,6 @@ function setLocale(value) {
 
 <style scoped>
 .locale-toggle {
-  position: fixed;
-  top: 1.25rem;
-  right: 1.5rem;
   display: inline-flex;
   gap: 0.35rem;
   padding: 0.25rem;
@@ -43,8 +40,6 @@ function setLocale(value) {
   border: 1px solid var(--paper-2);
   border-radius: 999px;
   box-shadow: var(--shadow-sm);
-  z-index: 10;
-  max-width: calc(100vw - 1.5rem);
 }
 
 .locale-btn {
@@ -66,8 +61,6 @@ function setLocale(value) {
 
 @media (max-width: 600px) {
   .locale-toggle {
-    top: 0.75rem;
-    right: 0.75rem;
     padding: 0.2rem;
   }
 

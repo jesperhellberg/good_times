@@ -1,5 +1,9 @@
 const BASE = '/api'
 
+function getAdminToken() {
+  return localStorage.getItem('adminToken') || ''
+}
+
 async function request(method, path, body) {
   const res = await fetch(`${BASE}${path}`, {
     method,
@@ -9,7 +13,32 @@ async function request(method, path, body) {
 
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText)
-    throw new Error(`${res.status}: ${text}`)
+    const err = new Error(`${res.status}: ${text}`)
+    err.status = res.status
+    err.body = text
+    throw err
+  }
+
+  return res.json()
+}
+
+async function adminRequest(method, path, body) {
+  const token = getAdminToken()
+  const headers = body ? { 'Content-Type': 'application/json' } : {}
+  if (token) headers['X-Admin-Token'] = token
+
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText)
+    const err = new Error(`${res.status}: ${text}`)
+    err.status = res.status
+    err.body = text
+    throw err
   }
 
   return res.json()
@@ -23,17 +52,17 @@ export const api = {
 
   /** Create a new poll. Returns { id } */
   createPoll(payload) {
-    return request('POST', '/poll', payload)
+    return adminRequest('POST', '/poll', payload)
   },
 
   /** List all events (admin) */
   listEvents() {
-    return request('GET', '/events')
+    return adminRequest('GET', '/events')
   },
 
   /** Delete a poll (admin). Returns { id } */
   deletePoll(id) {
-    return request('DELETE', `/poll/${id}`)
+    return adminRequest('DELETE', `/poll/${id}`)
   },
 
   /** Submit votes for a participant. Returns { participant_id } */
@@ -44,5 +73,20 @@ export const api = {
   /** Update votes for a participant. Returns { participant_id } */
   updateVotes(pollId, participantId, payload) {
     return request('PUT', `/poll/${pollId}/participant/${participantId}`, payload)
+  },
+
+  /** Admin signup. Returns { token, admin_id, name } */
+  signupAdmin(payload) {
+    return request('POST', '/admin/signup', payload)
+  },
+
+  /** Admin login. Returns { token, admin_id, name } */
+  loginAdmin(payload) {
+    return request('POST', '/admin/login', payload)
+  },
+
+  /** Admin logout. Returns { ok } */
+  logoutAdmin() {
+    return adminRequest('POST', '/admin/logout')
   },
 }

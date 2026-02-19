@@ -14,7 +14,7 @@
 
     <template v-else-if="poll">
       <header class="page-header">
-        <p class="eyebrow">Good Times</p>
+        <router-link class="eyebrow" to="/">Good Times</router-link>
         <h1>{{ poll.title }}</h1>
         <p v-if="poll.description" class="text-muted" style="margin-top: 0.5rem;">
           {{ poll.description }}

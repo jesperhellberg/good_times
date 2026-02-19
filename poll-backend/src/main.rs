@@ -1,5 +1,6 @@
 mod models;
 mod routes;
+mod auth;
 
 use axum::{
     routing::{get, post, put},
@@ -15,8 +16,13 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use routes::{
-    create_poll::create_poll, delete_poll::delete_poll, get_poll::get_poll,
-    list_events::list_events, submit_vote::submit_vote, update_votes::update_votes,
+    admin_auth::{login_admin, logout_admin, signup_admin},
+    create_poll::create_poll,
+    delete_poll::delete_poll,
+    get_poll::get_poll,
+    list_events::list_events,
+    submit_vote::submit_vote,
+    update_votes::update_votes,
 };
 
 #[tokio::main]
@@ -70,6 +76,9 @@ async fn main() -> anyhow::Result<()> {
         .allow_headers(Any);
 
     let app = Router::new()
+        .route("/api/admin/signup", post(signup_admin))
+        .route("/api/admin/login", post(login_admin))
+        .route("/api/admin/logout", post(logout_admin))
         .route("/api/poll", post(create_poll))
         .route("/api/poll/:id", get(get_poll).delete(delete_poll))
         .route("/api/poll/:id/vote", post(submit_vote))

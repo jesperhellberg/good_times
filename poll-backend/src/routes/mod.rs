@@ -1,3 +1,4 @@
+pub mod admin_auth;
 pub mod create_poll;
 pub mod delete_poll;
 pub mod get_poll;

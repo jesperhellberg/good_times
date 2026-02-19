@@ -10,6 +10,7 @@ pub struct EventRow {
     pub title: String,
     pub description: Option<String>,
     pub created_at: String,
+    pub admin_id: String,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -109,15 +110,34 @@ pub struct SubmitVoteResponse {
     pub participant_id: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct AdminAuthRequest {
+    pub name: String,
+    pub password: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AdminAuthResponse {
+    pub token: String,
+    pub admin_id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LogoutResponse {
+    pub ok: bool,
+}
+
 // ── Constructors ──────────────────────────────────────────────────────────────
 
 impl EventRow {
-    pub fn new(title: String, description: Option<String>) -> Self {
+    pub fn new(title: String, description: Option<String>, admin_id: String) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             title,
             description,
             created_at: Utc::now().to_rfc3339(),
+            admin_id,
         }
     }
 }

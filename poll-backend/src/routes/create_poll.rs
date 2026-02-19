@@ -1,6 +1,7 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{extract::State, http::HeaderMap, http::StatusCode, Json};
 use sqlx::SqlitePool;
 
+use crate::auth::require_admin;
 use crate::models::{CreateEventRequest, EventRow, TimeSlotRow};
 
 #[derive(serde::Serialize)]
@@ -10,8 +11,11 @@ pub struct CreateEventResponse {
 
 pub async fn create_poll(
     State(pool): State<SqlitePool>,
+    headers: HeaderMap,
     Json(payload): Json<CreateEventRequest>,
 ) -> Result<(StatusCode, Json<CreateEventResponse>), StatusCode> {
+    let admin = require_admin(&pool, &headers).await?;
+
     if payload.title.trim().is_empty() {
         return Err(StatusCode::UNPROCESSABLE_ENTITY);
     }
@@ -20,7 +24,7 @@ pub async fn create_poll(
         return Err(StatusCode::UNPROCESSABLE_ENTITY);
     }
 
-    let event = EventRow::new(payload.title, payload.description);
+    let event = EventRow::new(payload.title, payload.description, admin.admin_id);
 
     // Use a transaction so event + slots are created atomically
     let mut tx = pool
@@ -28,11 +32,14 @@ pub async fn create_poll(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    sqlx::query("INSERT INTO events (id, title, description, created_at) VALUES (?, ?, ?, ?)")
+    sqlx::query(
+        "INSERT INTO events (id, title, description, created_at, admin_id) VALUES (?, ?, ?, ?, ?)",
+    )
         .bind(&event.id)
         .bind(&event.title)
         .bind(&event.description)
         .bind(&event.created_at)
+        .bind(&event.admin_id)
     .execute(&mut *tx)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

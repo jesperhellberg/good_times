@@ -34,7 +34,7 @@ pub async fn get_poll(
 ) -> Result<Json<PollResponse>, StatusCode> {
     // Fetch the event
     let event = sqlx::query_as::<_, EventRow>(
-        "SELECT id, title, description, created_at FROM events WHERE id = ?",
+        "SELECT id, title, description, created_at, admin_id FROM events WHERE id = ?",
     )
     .bind(&event_id)
     .fetch_optional(&pool)
