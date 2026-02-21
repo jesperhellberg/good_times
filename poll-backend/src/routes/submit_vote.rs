@@ -3,12 +3,12 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 
 use crate::models::{ParticipantRow, SubmitVoteRequest, SubmitVoteResponse};
 
 pub async fn submit_vote(
-    State(pool): State<SqlitePool>,
+    State(pool): State<PgPool>,
     Path(event_id): Path<String>,
     Json(payload): Json<SubmitVoteRequest>,
 ) -> Result<(StatusCode, Json<SubmitVoteResponse>), StatusCode> {
@@ -20,7 +20,7 @@ pub async fn submit_vote(
 
     // Verify event exists
     let event_exists: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM events WHERE id = ?")
+        sqlx::query_scalar("SELECT COUNT(*) FROM events WHERE id = $1")
             .bind(&event_id)
         .fetch_one(&pool)
         .await
@@ -33,7 +33,7 @@ pub async fn submit_vote(
     // Verify all submitted time_slot_ids actually belong to this event
     for vote in &payload.votes {
         let slot_valid: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM time_slots WHERE id = ? AND event_id = ?")
+            sqlx::query_scalar("SELECT COUNT(*) FROM time_slots WHERE id = $1 AND event_id = $2")
                 .bind(&vote.time_slot_id)
                 .bind(&event_id)
         .fetch_one(&pool)
@@ -52,7 +52,7 @@ pub async fn submit_vote(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    sqlx::query("INSERT INTO participants (id, event_id, name, created_at) VALUES (?, ?, ?, ?)")
+    sqlx::query("INSERT INTO participants (id, event_id, name, created_at) VALUES ($1, $2, $3, $4)")
         .bind(&participant.id)
         .bind(&participant.event_id)
         .bind(&participant.name)
@@ -66,7 +66,7 @@ pub async fn submit_vote(
         sqlx::query(
             r#"
             INSERT INTO votes (participant_id, time_slot_id, available)
-            VALUES (?, ?, ?)
+            VALUES ($1, $2, $3)
             ON CONFLICT (participant_id, time_slot_id) DO UPDATE SET available = excluded.available
             "#,
         )

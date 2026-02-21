@@ -1,5 +1,5 @@
 use axum::{extract::State, http::HeaderMap, http::StatusCode, Json};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use argon2::Argon2;
@@ -17,7 +17,7 @@ struct AdminRow {
 }
 
 pub async fn signup_admin(
-    State(pool): State<SqlitePool>,
+    State(pool): State<PgPool>,
     Json(payload): Json<AdminAuthRequest>,
 ) -> Result<Json<AdminAuthResponse>, StatusCode> {
     let name = payload.name.trim();
@@ -41,7 +41,7 @@ pub async fn signup_admin(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let admin_insert = sqlx::query(
-        "INSERT INTO admins (id, name, password_hash, created_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO admins (id, name, password_hash, created_at) VALUES ($1, $2, $3, $4)",
     )
     .bind(&admin_id)
     .bind(name)
@@ -59,7 +59,7 @@ pub async fn signup_admin(
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    sqlx::query("INSERT INTO admin_sessions (id, admin_id, created_at) VALUES (?, ?, ?)")
+    sqlx::query("INSERT INTO admin_sessions (id, admin_id, created_at) VALUES ($1, $2, $3)")
         .bind(&token)
         .bind(&admin_id)
         .bind(&now)
@@ -79,7 +79,7 @@ pub async fn signup_admin(
 }
 
 pub async fn login_admin(
-    State(pool): State<SqlitePool>,
+    State(pool): State<PgPool>,
     Json(payload): Json<AdminAuthRequest>,
 ) -> Result<Json<AdminAuthResponse>, StatusCode> {
     let name = payload.name.trim();
@@ -88,7 +88,7 @@ pub async fn login_admin(
     }
 
     let admin = sqlx::query_as::<_, AdminRow>(
-        "SELECT id, name, password_hash FROM admins WHERE name = ?",
+        "SELECT id, name, password_hash FROM admins WHERE name = $1",
     )
     .bind(name)
     .fetch_optional(&pool)
@@ -106,7 +106,7 @@ pub async fn login_admin(
     let token = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
-    sqlx::query("INSERT INTO admin_sessions (id, admin_id, created_at) VALUES (?, ?, ?)")
+    sqlx::query("INSERT INTO admin_sessions (id, admin_id, created_at) VALUES ($1, $2, $3)")
         .bind(&token)
         .bind(&admin.id)
         .bind(&now)
@@ -122,12 +122,12 @@ pub async fn login_admin(
 }
 
 pub async fn logout_admin(
-    State(pool): State<SqlitePool>,
+    State(pool): State<PgPool>,
     headers: HeaderMap,
 ) -> Result<Json<LogoutResponse>, StatusCode> {
     let admin = require_admin(&pool, &headers).await?;
 
-    let result = sqlx::query("DELETE FROM admin_sessions WHERE id = ?")
+    let result = sqlx::query("DELETE FROM admin_sessions WHERE id = $1")
         .bind(&admin.token)
         .execute(&pool)
         .await

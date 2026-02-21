@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 
 use crate::models::{EventRow, ParticipantResponse, PollResponse, TimeSlotResponse, VoteResponse};
 
@@ -29,12 +29,12 @@ struct VoteRow {
 }
 
 pub async fn get_poll(
-    State(pool): State<SqlitePool>,
+    State(pool): State<PgPool>,
     Path(event_id): Path<String>,
 ) -> Result<Json<PollResponse>, StatusCode> {
     // Fetch the event
     let event = sqlx::query_as::<_, EventRow>(
-        "SELECT id, title, description, created_at, admin_id FROM events WHERE id = ?",
+        "SELECT id, title, description, created_at, admin_id FROM events WHERE id = $1",
     )
     .bind(&event_id)
     .fetch_optional(&pool)
@@ -52,7 +52,7 @@ pub async fn get_poll(
             COUNT(CASE WHEN v.available = 1 THEN 1 END) AS available_count
         FROM time_slots ts
         LEFT JOIN votes v ON v.time_slot_id = ts.id
-        WHERE ts.event_id = ?
+        WHERE ts.event_id = $1
         GROUP BY ts.id
         ORDER BY ts.starts_at ASC
         "#,
@@ -64,7 +64,7 @@ pub async fn get_poll(
 
     // Fetch participants
     let participants = sqlx::query_as::<_, ParticipantNameRow>(
-        "SELECT id, name FROM participants WHERE event_id = ? ORDER BY created_at ASC",
+        "SELECT id, name FROM participants WHERE event_id = $1 ORDER BY created_at ASC",
     )
     .bind(&event_id)
     .fetch_all(&pool)
@@ -80,7 +80,7 @@ pub async fn get_poll(
             v.available
         FROM votes v
         JOIN time_slots ts ON ts.id = v.time_slot_id
-        WHERE ts.event_id = ?
+        WHERE ts.event_id = $1
         "#,
     )
     .bind(&event_id)

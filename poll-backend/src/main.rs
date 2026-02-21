@@ -6,11 +6,9 @@ use axum::{
     routing::{get, post, put},
     Router,
 };
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::postgres::PgPoolOptions;
 use std::{
     net::SocketAddr,
-    path::{Path, PathBuf},
-    str::FromStr,
 };
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -36,37 +34,21 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:./poll.db".to_string());
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://poll:poll@localhost:5432/poll".to_string());
 
     let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
 
-    let (sqlite_path, sqlite_existed) = match sqlite_path_from_url(&database_url) {
-        Some(path) => {
-            if let Some(parent) = path.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            let existed = path.exists();
-            (Some(path), existed)
-        }
-        None => (None, true),
-    };
-
     // Set up the database pool
-    let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
-
-    let pool = SqlitePoolOptions::new()
+    let pool = PgPoolOptions::new()
         .max_connections(5)
-        .connect_with(options)
+        .connect(&database_url)
         .await?;
 
     // Run migrations
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    if let (Some(path), false) = (sqlite_path, sqlite_existed) {
-        tracing::info!("Created new database at {}", path.display());
-    }
     tracing::info!("Database ready");
 
     // CORS — allow all origins for local dev; tighten this for production
@@ -94,14 +76,4 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, app).await?;
 
     Ok(())
-}
-
-fn sqlite_path_from_url(database_url: &str) -> Option<PathBuf> {
-    let rest = database_url.strip_prefix("sqlite:")?;
-    let path = rest.trim_start_matches("//");
-    if path.is_empty() {
-        None
-    } else {
-        Some(Path::new(path).to_path_buf())
-    }
 }

@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 
 use crate::models::UpdateVotesRequest;
 
@@ -13,7 +13,7 @@ pub struct UpdateVotesResponse {
 }
 
 pub async fn update_votes(
-    State(pool): State<SqlitePool>,
+    State(pool): State<PgPool>,
     Path((event_id, participant_id)): Path<(String, String)>,
     Json(payload): Json<UpdateVotesRequest>,
 ) -> Result<Json<UpdateVotesResponse>, StatusCode> {
@@ -22,7 +22,7 @@ pub async fn update_votes(
     }
 
     let participant_exists: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM participants WHERE id = ? AND event_id = ?")
+        sqlx::query_scalar("SELECT COUNT(*) FROM participants WHERE id = $1 AND event_id = $2")
             .bind(&participant_id)
             .bind(&event_id)
     .fetch_one(&pool)
@@ -35,7 +35,7 @@ pub async fn update_votes(
 
     for vote in &payload.votes {
         let slot_valid: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM time_slots WHERE id = ? AND event_id = ?")
+            sqlx::query_scalar("SELECT COUNT(*) FROM time_slots WHERE id = $1 AND event_id = $2")
                 .bind(&vote.time_slot_id)
                 .bind(&event_id)
         .fetch_one(&pool)
@@ -55,8 +55,8 @@ pub async fn update_votes(
     sqlx::query(
         r#"
         DELETE FROM votes
-        WHERE participant_id = ?
-          AND time_slot_id IN (SELECT id FROM time_slots WHERE event_id = ?)
+        WHERE participant_id = $1
+          AND time_slot_id IN (SELECT id FROM time_slots WHERE event_id = $2)
         "#,
     )
     .bind(&participant_id)
@@ -70,7 +70,7 @@ pub async fn update_votes(
         sqlx::query(
             r#"
             INSERT INTO votes (participant_id, time_slot_id, available)
-            VALUES (?, ?, ?)
+            VALUES ($1, $2, $3)
             "#,
         )
         .bind(&participant_id)

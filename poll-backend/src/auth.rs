@@ -1,5 +1,5 @@
 use axum::http::HeaderMap;
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 
 use axum::http::StatusCode;
 
@@ -14,7 +14,7 @@ pub struct AdminContext {
 }
 
 pub async fn require_admin(
-    pool: &SqlitePool,
+    pool: &PgPool,
     headers: &HeaderMap,
 ) -> Result<AdminContext, StatusCode> {
     let token = headers
@@ -29,7 +29,7 @@ pub async fn require_admin(
         SELECT a.id AS admin_id
         FROM admin_sessions s
         JOIN admins a ON a.id = s.admin_id
-        WHERE s.id = ?
+        WHERE s.id = $1
         "#,
     )
     .bind(token)

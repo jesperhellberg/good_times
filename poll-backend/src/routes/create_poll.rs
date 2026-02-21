@@ -1,5 +1,5 @@
 use axum::{extract::State, http::HeaderMap, http::StatusCode, Json};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 
 use crate::auth::require_admin;
 use crate::models::{CreateEventRequest, EventRow, TimeSlotRow};
@@ -10,7 +10,7 @@ pub struct CreateEventResponse {
 }
 
 pub async fn create_poll(
-    State(pool): State<SqlitePool>,
+    State(pool): State<PgPool>,
     headers: HeaderMap,
     Json(payload): Json<CreateEventRequest>,
 ) -> Result<(StatusCode, Json<CreateEventResponse>), StatusCode> {
@@ -33,7 +33,7 @@ pub async fn create_poll(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     sqlx::query(
-        "INSERT INTO events (id, title, description, created_at, admin_id) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO events (id, title, description, created_at, admin_id) VALUES ($1, $2, $3, $4, $5)",
     )
         .bind(&event.id)
         .bind(&event.title)
@@ -47,7 +47,9 @@ pub async fn create_poll(
     for slot_input in payload.time_slots {
         let slot = TimeSlotRow::new(&event.id, slot_input.starts_at, slot_input.ends_at);
 
-        sqlx::query("INSERT INTO time_slots (id, event_id, starts_at, ends_at) VALUES (?, ?, ?, ?)")
+        sqlx::query(
+            "INSERT INTO time_slots (id, event_id, starts_at, ends_at) VALUES ($1, $2, $3, $4)",
+        )
             .bind(&slot.id)
             .bind(&slot.event_id)
             .bind(&slot.starts_at)

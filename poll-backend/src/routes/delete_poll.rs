@@ -1,5 +1,5 @@
 use axum::{extract::Path, extract::State, http::HeaderMap, http::StatusCode, Json};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 
 use crate::auth::require_admin;
 
@@ -9,14 +9,14 @@ pub struct DeletePollResponse {
 }
 
 pub async fn delete_poll(
-    State(pool): State<SqlitePool>,
+    State(pool): State<PgPool>,
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<DeletePollResponse>, StatusCode> {
     let admin = require_admin(&pool, &headers).await?;
 
     let event_admin_id: Option<String> =
-        sqlx::query_scalar("SELECT admin_id FROM events WHERE id = ?")
+        sqlx::query_scalar("SELECT admin_id FROM events WHERE id = $1")
             .bind(&id)
             .fetch_optional(&pool)
             .await
@@ -30,7 +30,7 @@ pub async fn delete_poll(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let result = sqlx::query("DELETE FROM events WHERE id = ? AND admin_id = ?")
+    let result = sqlx::query("DELETE FROM events WHERE id = $1 AND admin_id = $2")
         .bind(&id)
         .bind(&admin.admin_id)
         .execute(&pool)
