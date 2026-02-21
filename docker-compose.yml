@@ -3,6 +3,7 @@ services:
     build: ./poll-backend
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      PGPASSWORD: ${PGPASSWORD}
       RUST_LOG: info
     extra_hosts:
       - "host.docker.internal:host-gateway"
