@@ -25,7 +25,7 @@ struct ParticipantNameRow {
 struct VoteRow {
     participant_id: String,
     time_slot_id: String,
-    available: i64,
+    available: i32,
 }
 
 pub async fn get_poll(
@@ -39,7 +39,10 @@ pub async fn get_poll(
     .bind(&event_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    .map_err(|e| {
+        tracing::error!(error = ?e, event_id = %event_id, "Failed to fetch event");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
     .ok_or(StatusCode::NOT_FOUND)?;
 
     // Fetch time slots with vote counts
@@ -60,7 +63,10 @@ pub async fn get_poll(
     .bind(&event_id)
     .fetch_all(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!(error = ?e, event_id = %event_id, "Failed to fetch time slots");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     // Fetch participants
     let participants = sqlx::query_as::<_, ParticipantNameRow>(
@@ -69,7 +75,10 @@ pub async fn get_poll(
     .bind(&event_id)
     .fetch_all(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!(error = ?e, event_id = %event_id, "Failed to fetch participants");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     // Fetch all votes for this event in one query
     let votes = sqlx::query_as::<_, VoteRow>(
@@ -86,7 +95,10 @@ pub async fn get_poll(
     .bind(&event_id)
     .fetch_all(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!(error = ?e, event_id = %event_id, "Failed to fetch votes");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let time_slots = slots
         .into_iter()

@@ -24,7 +24,10 @@ pub async fn submit_vote(
             .bind(&event_id)
         .fetch_one(&pool)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!(error = ?e, event_id = %event_id, "Failed to check event existence");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     if event_exists == 0 {
         return Err(StatusCode::NOT_FOUND);
@@ -38,7 +41,15 @@ pub async fn submit_vote(
                 .bind(&event_id)
         .fetch_one(&pool)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!(
+                error = ?e,
+                event_id = %event_id,
+                time_slot_id = %vote.time_slot_id,
+                "Failed to validate time slot"
+            );
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
         if slot_valid == 0 {
             return Err(StatusCode::UNPROCESSABLE_ENTITY);
@@ -50,7 +61,10 @@ pub async fn submit_vote(
     let mut tx = pool
         .begin()
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!(error = ?e, event_id = %event_id, "Failed to begin transaction");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     sqlx::query("INSERT INTO participants (id, event_id, name, created_at) VALUES ($1, $2, $3, $4)")
         .bind(&participant.id)
@@ -59,28 +73,64 @@ pub async fn submit_vote(
         .bind(&participant.created_at)
     .execute(&mut *tx)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!(
+            error = ?e,
+            event_id = %event_id,
+            participant_id = %participant.id,
+            "Failed to insert participant"
+        );
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-    for vote in payload.votes {
-        let available = vote.available;
+    if !payload.votes.is_empty() {
+        let time_slot_ids: Vec<String> = payload
+            .votes
+            .iter()
+            .map(|vote| vote.time_slot_id.clone())
+            .collect();
+        let availabilities: Vec<i32> = payload
+            .votes
+            .iter()
+            .map(|vote| if vote.available { 1 } else { 0 })
+            .collect();
+
         sqlx::query(
             r#"
             INSERT INTO votes (participant_id, time_slot_id, available)
-            VALUES ($1, $2, $3)
+            SELECT $1, v.time_slot_id, v.available
+            FROM UNNEST($2::text[], $3::int[]) AS v(time_slot_id, available)
             ON CONFLICT (participant_id, time_slot_id) DO UPDATE SET available = excluded.available
             "#,
         )
         .bind(&participant.id)
-        .bind(&vote.time_slot_id)
-        .bind(available)
+        .bind(&time_slot_ids)
+        .bind(&availabilities)
         .execute(&mut *tx)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!(
+                error = ?e,
+                event_id = %event_id,
+                participant_id = %participant.id,
+                vote_count = time_slot_ids.len(),
+                "Failed to insert votes batch"
+            );
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     }
 
     tx.commit()
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!(
+                error = ?e,
+                event_id = %event_id,
+                participant_id = %participant.id,
+                "Failed to commit vote transaction"
+            );
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     Ok((
         StatusCode::CREATED,
