@@ -9,6 +9,7 @@ services:
       - "host.docker.internal:host-gateway"
     ports:
       - "3000:3000"
+    restart: unless-stopped
 
   frontend:
     build: ./poll-frontend
@@ -16,3 +17,4 @@ services:
       - "80:80"
     depends_on:
       - backend
+    restart: unless-stopped
